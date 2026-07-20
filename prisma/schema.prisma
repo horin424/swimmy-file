@@ -1,0 +1,272 @@
+// Prisma schema for Swimmy File.
+// Note: this project is on Prisma 7, which changed two conventions vs older
+// versions/training data: (1) the datasource `url` now lives in prisma.config.ts,
+// not in this file, and (2) the client generates to a custom folder (see `output`
+// below) instead of node_modules/@prisma/client. Import from "@/generated/prisma/client".
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// --- Enums ------------------------------------------------------------
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  BANNED
+  SUSPENDED
+}
+
+enum Visibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum VideoStatus {
+  UPLOADING
+  PROCESSING
+  ACTIVE
+  HIDDEN
+  DELETED
+  FAILED
+}
+
+enum ReportReason {
+  COPYRIGHT
+  SPAM
+  ADULT
+  VIOLENCE
+  OTHER
+}
+
+enum ReportStatus {
+  OPEN
+  REVIEWING
+  RESOLVED
+  REJECTED
+}
+
+enum BlacklistType {
+  IP
+  EMAIL
+  USER
+}
+
+enum TrustLevel {
+  NEW
+  TRUSTED
+  VETERAN
+}
+
+enum InquiryCategory {
+  GENERAL
+  BUG
+  RIGHTS_HOLDER
+  DELETE_REQUEST
+  OTHER
+}
+
+enum InquiryStatus {
+  OPEN
+  REVIEWING
+  CLOSED
+}
+
+// --- Models -------------------------------------------------------------
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  passwordHash String
+  emailVerified Boolean   @default(false)
+  role         Role       @default(USER)
+  status       UserStatus @default(ACTIVE)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  videos      Video[]
+  reports     Report[]     @relation("ReportedBy")
+  inquiries   Inquiry[]
+  adminLogs   AdminLog[]   @relation("AdminActor")
+  uploadLimit UploadLimit?
+
+  @@index([status])
+  @@map("users")
+}
+
+model Video {
+  id               String      @id @default(cuid())
+  userId           String
+  title            String
+  description      String?
+  storagePath      String
+  originalFileName String
+  // Bytes. Int32 tops out around 2.1GB, well under the product's 50GB max file
+  // size, so this must be BigInt rather than Int.
+  fileSize         BigInt
+  mimeType         String
+  // Seconds. Nullable — unknown until post-upload processing determines it.
+  duration         Int?
+  thumbnailPath    String?
+  visibility       Visibility  @default(PUBLIC)
+  status           VideoStatus @default(UPLOADING)
+  shareToken       String      @unique
+  viewCount        Int         @default(0)
+  reportCount      Int         @default(0)
+  // Videos are intentionally excluded from Discover until explicitly enabled
+  // (anti-spam gate from the design doc), regardless of status/visibility.
+  discoverEnabled  Boolean     @default(false)
+  expiresAt        DateTime?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  // Not in the originally requested field list, but Category otherwise has no
+  // relation to Video anywhere in the schema, which would make it a dead table —
+  // added as nullable so a video can be uncategorized. Flag if this should be
+  // required instead, or removed if Category is meant to stay unlinked for now.
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  uploader  User       @relation(fields: [userId], references: [id], onDelete: Restrict)
+  tags      VideoTag[]
+  reports   Report[]
+  inquiries Inquiry[]
+
+  @@index([status])
+  @@index([visibility])
+  @@index([createdAt])
+  @@index([viewCount])
+  @@index([reportCount])
+  @@index([discoverEnabled])
+  // Composite index matching the actual Discover feed query pattern
+  // (WHERE visibility = PUBLIC AND status = ACTIVE AND discoverEnabled = true
+  // ORDER BY createdAt DESC) — the single-column indexes above satisfy the
+  // literal request; this one is an added recommendation for that specific query.
+  @@index([visibility, status, discoverEnabled, createdAt])
+  @@map("videos")
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  videos Video[]
+
+  @@map("categories")
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+
+  videos VideoTag[]
+
+  @@map("tags")
+}
+
+model VideoTag {
+  videoId String
+  tagId   String
+
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  tag   Tag   @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([videoId, tagId])
+  @@index([tagId])
+  @@map("video_tags")
+}
+
+model Report {
+  id         String       @id @default(cuid())
+  videoId    String
+  reporterId String?
+  reason     ReportReason
+  message    String?
+  status     ReportStatus @default(OPEN)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  video    Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  reporter User? @relation("ReportedBy", fields: [reporterId], references: [id], onDelete: SetNull)
+
+  @@index([videoId])
+  @@index([status])
+  @@map("reports")
+}
+
+model Blacklist {
+  id        String        @id @default(cuid())
+  type      BlacklistType
+  value     String
+  reason    String?
+  createdAt DateTime      @default(now())
+
+  @@unique([type, value])
+  @@map("blacklist")
+}
+
+model UploadLimit {
+  id           String     @id @default(cuid())
+  userId       String     @unique
+  dailyCount   Int        @default(0)
+  // Bytes. 10GB (the default total-storage cap) exceeds Int32 range, same
+  // reasoning as Video.fileSize — must be BigInt.
+  storageUsed  BigInt     @default(0)
+  trustLevel   TrustLevel @default(NEW)
+  lastResetAt  DateTime   @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("upload_limits")
+}
+
+model AdminLog {
+  id           String   @id @default(cuid())
+  adminUserId  String
+  action       String
+  targetType   String
+  targetId     String
+  metadata     Json?    @db.JsonB
+  createdAt    DateTime @default(now())
+
+  // Restrict rather than Cascade/SetNull: audit log integrity should block
+  // deleting an admin account that has log entries, not silently lose them.
+  adminUser User @relation("AdminActor", fields: [adminUserId], references: [id], onDelete: Restrict)
+
+  @@index([targetType, targetId])
+  @@index([createdAt])
+  @@map("admin_logs")
+}
+
+model Inquiry {
+  id             String          @id @default(cuid())
+  userId         String?
+  email          String
+  category       InquiryCategory
+  subject        String
+  message        String
+  relatedVideoId String?
+  status         InquiryStatus   @default(OPEN)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  user         User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  relatedVideo Video? @relation(fields: [relatedVideoId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@map("inquiries")
+}

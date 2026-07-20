@@ -1,0 +1,104 @@
+export type Visibility = "public" | "private";
+
+export type VideoStatus = "processing" | "active" | "hidden" | "removed";
+
+export interface Category {
+  slug: string;
+  name: string;
+  count: number;
+}
+
+export interface Tag {
+  slug: string;
+  name: string;
+  count: number;
+}
+
+export interface Uploader {
+  id: string;
+  handle: string;
+  avatarColor: string;
+  trustLevel: "new" | "trusted" | "veteran";
+}
+
+export interface Video {
+  id: string;
+  shareToken: string;
+  title: string;
+  description: string;
+  thumbnailGradient: [string, string];
+  durationSeconds: number;
+  fileSizeMb: number;
+  views: number;
+  reportCount: number;
+  category: string;
+  tags: string[];
+  visibility: Visibility;
+  status: VideoStatus;
+  discoverEnabled: boolean;
+  uploader: Uploader;
+  createdAt: string;
+  expiresAt: string;
+  /** Internal ranking helper (views + recency, minus a report penalty) — not a user-facing metric. */
+  rankScore: number;
+  rank?: number;
+}
+
+export interface StorageUsage {
+  usedGb: number;
+  totalGb: number;
+}
+
+export type UserStatus = "active" | "banned";
+
+export interface AppUser {
+  id: string;
+  handle: string;
+  email: string;
+  status: UserStatus;
+  trustLevel: "new" | "trusted" | "veteran";
+  uploads: number;
+  reportCount: number;
+  joinedAt: string;
+}
+
+export type InquiryStatus = "open" | "resolved";
+
+export interface Inquiry {
+  id: string;
+  category: "general" | "copyright" | "report" | "account";
+  email: string;
+  subject: string;
+  message: string;
+  relatedUrl?: string;
+  status: InquiryStatus;
+  createdAt: string;
+}
+
+export type BlacklistType = "ip" | "email" | "user";
+
+export interface BlacklistEntry {
+  id: string;
+  type: BlacklistType;
+  value: string;
+  reason: string;
+  createdAt: string;
+}
+
+export type ReportReason = "copyright" | "spam" | "adult" | "violence" | "other";
+
+export type ReportTicketStatus = "open" | "reviewing" | "resolved" | "rejected";
+
+// Named ReportTicket (not "Report") to avoid clashing with the Prisma `Report`
+// model once real data replaces this mock.
+export interface ReportTicket {
+  id: string;
+  videoId: string;
+  videoTitle: string;
+  shareToken: string;
+  reporterHandle?: string;
+  reason: ReportReason;
+  message?: string;
+  status: ReportTicketStatus;
+  createdAt: string;
+}
