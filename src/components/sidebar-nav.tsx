@@ -124,12 +124,10 @@ export function SidebarNav() {
 
       {status === "authenticated" && user && <NavSection title="Create" items={createItems} pathname={pathname} />}
 
-      {status === "guest" && <NavSection title="Account" items={guestAccountItems} pathname={pathname} />}
-
-      {status === "authenticated" && user && (
-        <NavSection title="My Account" items={myAccountItems} pathname={pathname} />
-      )}
-
+      {/* Tags are quick filter shortcuts, not pages — kept as their own
+          section (not nested under Explore) but placed right after
+          browsing/creating and before account management, since they're
+          still a discovery aid rather than account content. */}
       <div>
         <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
           Trending Tags
@@ -146,6 +144,12 @@ export function SidebarNav() {
           ))}
         </div>
       </div>
+
+      {status === "guest" && <NavSection title="Account" items={guestAccountItems} pathname={pathname} />}
+
+      {status === "authenticated" && user && (
+        <NavSection title="My Account" items={myAccountItems} pathname={pathname} />
+      )}
 
       {status === "authenticated" && user && (
         <div className="mt-auto flex flex-col gap-2 border-t border-border pt-4">
