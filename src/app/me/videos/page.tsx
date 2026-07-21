@@ -10,6 +10,7 @@ import {
   Lock,
   Copy,
   PlayCircle,
+  Upload as UploadIcon,
 } from "lucide-react";
 import { VideoThumb } from "@/components/video-thumb";
 import { Badge } from "@/components/ui/badge";
@@ -101,46 +102,77 @@ export default function MyVideosPage() {
           <p className="mt-1 text-sm text-muted-foreground">Manage your uploaded videos.</p>
         </div>
         <div className="flex items-center gap-2">
-          <label htmlFor="my-videos-sort" className="text-xs font-medium text-muted-foreground">
-            Sort by
-          </label>
-          <Select
-            value={sort}
-            onValueChange={(v) => setSort(v as SortValue)}
-            items={Object.fromEntries(sortOptions.map((s) => [s.value, s.label]))}
+          <Button
+            render={<Link href="/upload" />}
+            nativeButton={false}
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
           >
-            <SelectTrigger id="my-videos-sort" size="sm" className="w-40">
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              {sortOptions.map((s) => (
-                <SelectItem key={s.value} value={s.value}>
-                  {s.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <UploadIcon className="h-3.5 w-3.5" />
+            Upload new video
+          </Button>
         </div>
       </div>
 
-      <div className="mb-5 flex flex-wrap gap-1.5">
-        {filters.map((f) => (
-          <button
-            key={f.value}
-            onClick={() => setFilter(f.value)}
-            className={cn(
-              "rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
-              filter === f.value
-                ? "border-primary/50 bg-primary/15 text-primary"
-                : "border-border text-muted-foreground hover:border-border-strong hover:text-foreground",
-            )}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
+      {myVideos.length > 0 && (
+          <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap gap-1.5">
+              {filters.map((f) => (
+                <button
+                  key={f.value}
+                  onClick={() => setFilter(f.value)}
+                  className={cn(
+                    "rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
+                    filter === f.value
+                      ? "border-primary/50 bg-primary/15 text-primary"
+                      : "border-border text-muted-foreground hover:border-border-strong hover:text-foreground",
+                  )}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <label htmlFor="my-videos-sort" className="text-xs font-medium text-muted-foreground">
+                Sort by
+              </label>
+              <Select
+                value={sort}
+                onValueChange={(v) => setSort(v as SortValue)}
+                items={Object.fromEntries(sortOptions.map((s) => [s.value, s.label]))}
+              >
+                <SelectTrigger id="my-videos-sort" size="sm" className="w-40">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sortOptions.map((s) => (
+                    <SelectItem key={s.value} value={s.value}>
+                      {s.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+      )}
 
-      {filtered.length === 0 ? (
+      {myVideos.length === 0 ? (
+        <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed border-border py-20 text-center">
+          <div>
+            <p className="text-sm font-medium">You have not uploaded any videos yet.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Upload your first video to create a shareable link.</p>
+          </div>
+          <Button
+            render={<Link href="/upload" />}
+            nativeButton={false}
+            className="gap-1.5 bg-gradient-brand text-white hover:opacity-90"
+          >
+            <UploadIcon className="h-3.5 w-3.5" />
+            Upload your first video
+          </Button>
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border py-16 text-center text-sm text-muted-foreground">
           No videos match this filter.
         </div>
