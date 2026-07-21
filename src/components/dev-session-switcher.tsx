@@ -36,13 +36,13 @@ const presets: { label: string; session: Session; href?: string }[] = [
 // No auth backend exists yet — this lets the mock session (src/lib/session.ts)
 // be switched from the running app instead of hand-editing source, so every
 // gated view (guest, unverified, ADMIN) stays reachable for preview/QA.
-// Development builds only; renders nothing in production.
+// Intentionally left enabled in production too (not just dev builds) while
+// the deployed build is being demoed to the client with no real backend —
+// remove/re-gate this once real auth replaces the mock session.
 export function DevSessionSwitcher() {
   const [open, setOpen] = useState(false);
   const { status, user } = useSession();
   const router = useRouter();
-
-  if (process.env.NODE_ENV === "production") return null;
 
   const activeLabel =
     status === "guest" ? "Guest" : status === "loading" ? "…" : user?.role === "ADMIN" ? "Admin" : user?.emailVerified === false ? "Unverified" : "User";
