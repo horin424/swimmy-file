@@ -15,8 +15,17 @@ function DialogTrigger({ ...props }: DialogPrimitive.Trigger.Props) {
   return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />
 }
 
-function DialogPortal({ ...props }: DialogPrimitive.Portal.Props) {
-  return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />
+function DialogPortal({ children, ...props }: DialogPrimitive.Portal.Props) {
+  return (
+    <DialogPrimitive.Portal data-slot="dialog-portal" {...props}>
+      {/* Portaled content lives outside the trigger's DOM subtree, but React
+          still bubbles its synthetic events up the *component* tree — stop
+          that here so a dialog opened from inside a Link/button (e.g. a
+          report action on a video card) never also fires that ancestor's
+          own click handler (page navigation). */}
+      <div onClick={(e) => e.stopPropagation()}>{children}</div>
+    </DialogPrimitive.Portal>
+  )
 }
 
 function DialogClose({ ...props }: DialogPrimitive.Close.Props) {

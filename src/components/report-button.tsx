@@ -31,30 +31,43 @@ const reasons = [
   { value: "other", label: "Other" },
 ];
 
-export function ReportButton() {
+export function ReportButton({ variant = "default" }: { variant?: "default" | "icon" }) {
   const { status } = useSession();
   const [open, setOpen] = useState(false);
 
+  const handleTriggerClick = (e: React.MouseEvent) => {
+    // The icon variant lives inside a VideoCard's Link (thumbnail overlay) —
+    // stop it from also triggering navigation to the video.
+    e.preventDefault();
+    e.stopPropagation();
+    // Reporting requires an account — guests get a notice instead of the
+    // report form, same idea as the email-verification gate on uploads
+    // (block the action, tell the user why, no dead-end UI).
+    if (status !== "authenticated") {
+      toast.error("Log in to report this video.");
+      return;
+    }
+    setOpen(true);
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <Button
-        size="sm"
-        variant="outline"
-        className="gap-1.5 text-muted-foreground"
-        onClick={() => {
-          // Reporting requires an account — guests get a notice instead of
-          // the report form, same idea as the email-verification gate on
-          // uploads (block the action, tell the user why, no dead-end UI).
-          if (status !== "authenticated") {
-            toast.error("Log in to report this video.");
-            return;
-          }
-          setOpen(true);
-        }}
-      >
-        <Flag className="h-3.5 w-3.5" />
-        Report
-      </Button>
+      {variant === "icon" ? (
+        <Button
+          size="icon-sm"
+          variant="outline"
+          aria-label="Report this video"
+          className="bg-black/55 text-white/90 backdrop-blur-sm hover:bg-black/70 hover:text-white"
+          onClick={handleTriggerClick}
+        >
+          <Flag className="h-3.5 w-3.5" />
+        </Button>
+      ) : (
+        <Button size="sm" variant="outline" className="gap-1.5 text-muted-foreground" onClick={handleTriggerClick}>
+          <Flag className="h-3.5 w-3.5" />
+          Report
+        </Button>
+      )}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Report this video</DialogTitle>

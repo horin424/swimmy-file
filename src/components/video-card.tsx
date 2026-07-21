@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { Eye } from "lucide-react";
 import { VideoThumb } from "./video-thumb";
+import { ReportButton } from "./report-button";
 import { cn } from "@/lib/utils";
-import { formatCount } from "@/lib/mock-data";
+import { formatCount, myVideoIds } from "@/lib/mock-data";
 import type { Video } from "@/lib/types";
 
 export function VideoCard({
@@ -14,6 +15,7 @@ export function VideoCard({
 }) {
   const rank = video.rank;
   const showRankBadge = typeof rank === "number" && rank <= 12;
+  const isMine = myVideoIds.has(video.id);
 
   return (
     <Link
@@ -26,6 +28,11 @@ export function VideoCard({
             <span className="absolute left-2 top-2 rounded-full bg-black/55 px-2 py-0.5 text-[11px] font-semibold text-white">
               #{rank}
             </span>
+          )}
+          {!isMine && (
+            <div className="absolute right-2 top-2">
+              <ReportButton variant="icon" />
+            </div>
           )}
         </VideoThumb>
       </div>
