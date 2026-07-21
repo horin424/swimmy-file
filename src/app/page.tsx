@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { Sparkles } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { VideoCard } from "@/components/video-card";
@@ -157,11 +156,8 @@ export default function DiscoverPage() {
 
       {grid.length > 0 && (
         <section className="px-6 pb-16 md:px-10">
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4">
             <h2 className="text-lg font-semibold">More videos</h2>
-            <Button render={<Link href="/search" />} nativeButton={false} variant="ghost" size="sm" className="text-muted-foreground">
-              View all
-            </Button>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             {visibleGrid.map((v) => (
