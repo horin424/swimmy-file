@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { categories, currentUserStorage } from "@/lib/mock-data";
+import { useSession } from "@/lib/session";
 import { toast } from "sonner";
 
 interface UploadItem {
@@ -96,6 +97,8 @@ function generateClientThumbnail(file: File): Promise<string> {
 }
 
 export default function UploadPage() {
+  const { user } = useSession();
+  const emailVerified = user?.emailVerified ?? true;
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [file, setFile] = useState<UploadItem | null>(null);
@@ -106,12 +109,23 @@ export default function UploadPage() {
   const [tagDraft, setTagDraft] = useState("");
   const [published, setPublished] = useState(false);
 
+  // Same wording as the sidebar/account-menu unverified-state notices, so
+  // this reads as one consistent rule rather than a one-off upload message.
+  const requireVerifiedEmail = useCallback(() => {
+    if (!emailVerified) {
+      toast.error("Email verification required — verify your email before uploading.");
+      return false;
+    }
+    return true;
+  }, [emailVerified]);
+
   // Only one video per upload session — selecting/dropping a file while one
   // is already staged replaces nothing; it's rejected so a second video can
   // never queue up alongside the first.
   const addFile = useCallback(
     (fileList: FileList | null) => {
       if (!fileList || fileList.length === 0) return;
+      if (!requireVerifiedEmail()) return;
       if (file) {
         toast.error("Remove the current video before adding another.");
         return;
@@ -151,7 +165,7 @@ export default function UploadPage() {
           setFile((prev) => (prev && prev.id === id ? { ...prev, thumbnailStatus: "failed" } : prev));
         });
     },
-    [file],
+    [file, requireVerifiedEmail],
   );
 
   const addTag = () => {
@@ -210,10 +224,13 @@ export default function UploadPage() {
               {!file ? (
                 <button
                   type="button"
-                  onClick={() => inputRef.current?.click()}
+                  onClick={() => {
+                    if (!requireVerifiedEmail()) return;
+                    inputRef.current?.click();
+                  }}
                   onDragOver={(e) => {
                     e.preventDefault();
-                    setDragging(true);
+                    if (emailVerified) setDragging(true);
                   }}
                   onDragLeave={() => setDragging(false)}
                   onDrop={(e) => {
@@ -224,6 +241,7 @@ export default function UploadPage() {
                   className={cn(
                     "group relative flex min-h-[320px] w-full flex-col items-center justify-center gap-4 overflow-hidden rounded-2xl border-2 border-dashed border-border bg-card px-6 py-16 text-center transition-colors",
                     dragging && "border-primary/60 bg-primary/5",
+                    !emailVerified && "opacity-60",
                   )}
                 >
                   <div className="pointer-events-none absolute -top-20 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-primary/15 blur-3xl transition-opacity group-hover:opacity-80" />
@@ -237,6 +255,9 @@ export default function UploadPage() {
                   <p className="relative text-xs text-muted-foreground/70">
                     Supports MP4, MOV, MKV, WebM and more · Max file size 2GB · One video per upload
                   </p>
+                  {!emailVerified && (
+                    <p className="relative text-xs font-medium text-warning">Email verification required</p>
+                  )}
                   <input
                     ref={inputRef}
                     type="file"
