@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
+import { DevSessionSwitcher } from "@/components/dev-session-switcher";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -34,6 +35,7 @@ export default function RootLayout({
         <TooltipProvider delay={200}>
           {children}
           <Toaster />
+          <DevSessionSwitcher />
         </TooltipProvider>
       </body>
     </html>

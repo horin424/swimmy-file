@@ -37,7 +37,10 @@ function SearchResults() {
   const searchParams = useSearchParams();
   const query = searchParams.get("q") ?? "";
 
-  const [category, setCategory] = useState<string>("all");
+  const requestedCategory = searchParams.get("category");
+  const [category, setCategory] = useState<string>(
+    requestedCategory && categories.some((c) => c.slug === requestedCategory) ? requestedCategory : "all",
+  );
   const [tags, setTags] = useState<string[]>([]);
   const [period, setPeriod] = useState<Period>("all");
   const [sort, setSort] = useState<Sort>("popular");

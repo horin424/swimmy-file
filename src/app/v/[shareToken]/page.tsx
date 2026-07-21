@@ -7,7 +7,7 @@ import { VideoThumb } from "@/components/video-thumb";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Eye, CalendarClock } from "lucide-react";
-import { videos, formatCount, timeAgo } from "@/lib/mock-data";
+import { videos, myVideoIds, formatCount, timeAgo } from "@/lib/mock-data";
 
 export default async function VideoDetailPage({
   params,
@@ -20,6 +20,8 @@ export default async function VideoDetailPage({
 
   const related = videos.filter((v) => v.id !== video.id && v.category === video.category).slice(0, 6);
   const shareUrl = `swimmyfile.io/v/${video.shareToken}`;
+  // You can't report your own upload — this is one of "my files".
+  const isMine = myVideoIds.has(video.id);
 
   return (
     <AppShell>
@@ -63,7 +65,7 @@ export default async function VideoDetailPage({
               {shareUrl}
             </code>
             <CopyLinkButton url={shareUrl} />
-            <ReportButton />
+            {!isMine && <ReportButton />}
           </div>
 
           <div className="rounded-xl border border-border bg-card/40 p-4">

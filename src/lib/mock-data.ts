@@ -131,6 +131,48 @@ export const videos: Video[] = [...rawVideos]
   .sort((a, b) => b.rankScore - a.rankScore)
   .map((v, idx) => ({ ...v, rank: idx + 1 }));
 
+// The videos shown as "mine" on /me — until real auth/ownership exists,
+// this mock just claims the first 7. Exported so any page that needs to
+// know "is this my video" (e.g. hiding the Report button on my own video's
+// detail page) shares this definition instead of re-deriving it.
+export const myVideoIds: ReadonlySet<string> = new Set(videos.slice(0, 7).map((v) => v.id));
+
+const allTagSlugs: string[] = Array.from(new Set(videos.flatMap((v) => v.tags)));
+const allUploaderHandles: string[] = Array.from(new Set(videos.map((v) => v.uploader.handle)));
+
+export interface SearchSuggestion {
+  type: "video" | "tag" | "uploader";
+  label: string;
+  sublabel?: string;
+  href: string;
+}
+
+// Header search-box autocomplete: a handful of matching videos, tags, and
+// uploaders, cheapest match first. Real backend would do this server-side
+// (full-text search, ranking) — this is a client-side stand-in over the
+// same mock data /search already filters against.
+export function getSearchSuggestions(query: string, limit = 8): SearchSuggestion[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+
+  const videoMatches: SearchSuggestion[] = videos
+    .filter((v) => v.status === "active" && v.visibility === "public" && v.title.toLowerCase().includes(q))
+    .slice(0, 4)
+    .map((v) => ({ type: "video", label: v.title, sublabel: `@${v.uploader.handle}`, href: `/v/${v.shareToken}` }));
+
+  const tagMatches: SearchSuggestion[] = allTagSlugs
+    .filter((t) => t.includes(q))
+    .slice(0, 3)
+    .map((t) => ({ type: "tag", label: `#${t}`, href: `/search?q=${encodeURIComponent(t)}` }));
+
+  const uploaderMatches: SearchSuggestion[] = allUploaderHandles
+    .filter((h) => h.toLowerCase().includes(q))
+    .slice(0, 3)
+    .map((h) => ({ type: "uploader", label: `@${h}`, href: `/search?q=${encodeURIComponent(h)}` }));
+
+  return [...videoMatches, ...tagMatches, ...uploaderMatches].slice(0, limit);
+}
+
 // New-account limits per the agreed MVP policy: 5 uploads/day, 2GB/file, 10GB total.
 export const currentUserStorage: StorageUsage = {
   usedGb: 4.2,

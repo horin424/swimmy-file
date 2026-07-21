@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Film,
@@ -12,10 +12,13 @@ import {
   ShieldBan,
   ArrowLeftToLine,
   Menu,
+  Compass,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useSession } from "@/lib/session";
 import { Logo } from "./logo";
 import { Button } from "./ui/button";
+import { AppShell } from "./app-shell";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "./ui/sheet";
 
 const navItems = [
@@ -67,6 +70,46 @@ function AdminNavContent({ onNavigate }: { onNavigate?: () => void }) {
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const { status, user } = useSession();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  // Client-side gate only, same caveat as RequireUser: a real backend must
+  // enforce admin-only access on its own API routes regardless of this check.
+  useEffect(() => {
+    if (status === "guest") {
+      router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+    }
+  }, [status, pathname, router]);
+
+  if (status === "loading" || status === "guest") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-ocean">
+        <div className="h-8 w-8 animate-pulse rounded-full bg-primary/30" />
+      </div>
+    );
+  }
+
+  if (!user || user.role !== "ADMIN") {
+    return (
+      <AppShell>
+        <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-6 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent text-primary">
+            <Compass className="h-6 w-6" />
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight">Page not found</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              The page you&apos;re looking for doesn&apos;t exist or may have been removed.
+            </p>
+          </div>
+          <Button render={<Link href="/" />} nativeButton={false}>
+            Back to Discover
+          </Button>
+        </div>
+      </AppShell>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-ocean md:flex-row">

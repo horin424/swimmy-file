@@ -23,7 +23,7 @@ const categories = [
   { value: "account", label: "Account issue" },
 ];
 
-export default function ContactPage() {
+export default function SupportPage() {
   const [submitted, setSubmitted] = useState(false);
 
   return (
@@ -34,7 +34,7 @@ export default function ContactPage() {
             <LifeBuoy className="h-5 w-5" />
           </div>
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Contact & Support</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Support</h1>
             <p className="text-sm text-muted-foreground">
               Questions, copyright requests, or reports — we read every message.
             </p>

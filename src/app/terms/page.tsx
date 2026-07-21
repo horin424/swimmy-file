@@ -68,8 +68,8 @@ export default function TermsPage() {
       <h2>6. Copyright / Rights Holder Requests</h2>
       <p>
         If you believe content on the Service infringes your copyright, submit a request via the{" "}
-        <Link href="/contact" className="text-primary hover:underline">
-          Contact page
+        <Link href="/support" className="text-primary hover:underline">
+          Support page
         </Link>
         , selecting the copyright/rights-holder category and including enough detail to identify the
         content and your claim. The Company will review and may remove content pending investigation.
@@ -107,8 +107,8 @@ export default function TermsPage() {
       <h2>12. Contact</h2>
       <p>
         Questions about these Terms can be sent via the{" "}
-        <Link href="/contact" className="text-primary hover:underline">
-          Contact page
+        <Link href="/support" className="text-primary hover:underline">
+          Support page
         </Link>
         .
       </p>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Mail, Lock } from "lucide-react";
 import { AuthLayout } from "@/components/auth-layout";
+import { ForgotPasswordDialog } from "@/components/forgot-password-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -34,9 +35,7 @@ export default function LoginPage() {
             <Label htmlFor="password" className="text-xs text-muted-foreground">
               Password
             </Label>
-            <Link href="/contact" className="text-xs text-primary hover:underline">
-              Forgot?
-            </Link>
+            <ForgotPasswordDialog />
           </div>
           <div className="relative">
             <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

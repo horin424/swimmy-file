@@ -2,28 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  Compass,
-  Flame,
-  History,
-  LayoutGrid,
-  FolderOpen,
-  User,
-  LogIn,
-  UserPlus,
-  LogOut,
-  LayoutDashboard,
-  Film,
-  Flag,
-  Users,
-  ShieldBan,
-  Inbox,
-  ScrollText,
-  type LucideIcon,
-} from "lucide-react";
+import { Compass, LayoutGrid, FolderOpen, LogIn, UserPlus, LogOut, type LucideIcon } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
-import { useSession } from "@/lib/session";
+import { cn, initials } from "@/lib/utils";
+import { setMockSession, useSession } from "@/lib/session";
 import { trendingTags } from "@/lib/mock-data";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -35,10 +17,12 @@ interface NavItem {
   icon: LucideIcon;
 }
 
+// Popular/Recent are filters within Discover (see period/sort controls on
+// "/"), not separate routes — the functional spec's route map (SF-UI-001
+// §3) has no standalone /popular or /recent page. Categories does have its
+// own browse page, so it's kept here unlike those two.
 const exploreItems: NavItem[] = [
   { href: "/", label: "Discover", icon: Compass },
-  { href: "/popular", label: "Popular", icon: Flame },
-  { href: "/recent", label: "Recent", icon: History },
   { href: "/categories", label: "Categories", icon: LayoutGrid },
 ];
 
@@ -47,26 +31,9 @@ const guestAccountItems: NavItem[] = [
   { href: "/signup", label: "Create account", icon: UserPlus },
 ];
 
-const myAccountItems: NavItem[] = [
-  { href: "/me", label: "My Files", icon: FolderOpen },
-  { href: "/profile", label: "Profile", icon: User },
-];
-
-const adminItems: NavItem[] = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/videos", label: "Videos", icon: Film },
-  { href: "/admin/reports", label: "Reports", icon: Flag },
-  { href: "/admin/users", label: "Users", icon: Users },
-  { href: "/admin/blacklist", label: "Blacklist", icon: ShieldBan },
-  { href: "/admin/inquiries", label: "Support", icon: Inbox },
-  { href: "/admin/audit-logs", label: "Audit Logs", icon: ScrollText },
-];
-
-function initials(handle: string): string {
-  const parts = handle.split(/[^a-zA-Z0-9]+/).filter(Boolean);
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-  return handle.slice(0, 2).toUpperCase();
-}
+// No standalone Profile page by design (Master Guide §11) — account settings
+// live in the My Files "Settings" tab instead.
+const myAccountItems: NavItem[] = [{ href: "/me", label: "My Files", icon: FolderOpen }];
 
 function NavSection({ title, items, pathname }: { title: string; items: NavItem[]; pathname: string }) {
   return (
@@ -129,12 +96,7 @@ export function SidebarNav() {
       {status === "guest" && <NavSection title="Account" items={guestAccountItems} pathname={pathname} />}
 
       {status === "authenticated" && user && (
-        <>
-          <NavSection title="My Account" items={myAccountItems} pathname={pathname} />
-          {user.role === "ADMIN" && (
-            <NavSection title="Administration" items={adminItems} pathname={pathname} />
-          )}
-        </>
+        <NavSection title="My Account" items={myAccountItems} pathname={pathname} />
       )}
 
       <div>
@@ -172,7 +134,10 @@ export function SidebarNav() {
             variant="ghost"
             size="sm"
             className="mx-1 justify-start gap-2 text-muted-foreground hover:text-foreground"
-            onClick={() => toast("Signed out")}
+            onClick={() => {
+              setMockSession({ status: "guest", user: null });
+              toast("Signed out");
+            }}
           >
             <LogOut className="h-4 w-4" />
             Sign out
