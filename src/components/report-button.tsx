@@ -19,8 +19,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
+import { useSession } from "@/lib/session";
 import { toast } from "sonner";
 
 const reasons = [
@@ -32,14 +32,29 @@ const reasons = [
 ];
 
 export function ReportButton() {
+  const { status } = useSession();
   const [open, setOpen] = useState(false);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button size="sm" variant="outline" className="gap-1.5 text-muted-foreground" />}>
+      <Button
+        size="sm"
+        variant="outline"
+        className="gap-1.5 text-muted-foreground"
+        onClick={() => {
+          // Reporting requires an account — guests get a notice instead of
+          // the report form, same idea as the email-verification gate on
+          // uploads (block the action, tell the user why, no dead-end UI).
+          if (status !== "authenticated") {
+            toast.error("Log in to report this video.");
+            return;
+          }
+          setOpen(true);
+        }}
+      >
         <Flag className="h-3.5 w-3.5" />
         Report
-      </DialogTrigger>
+      </Button>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Report this video</DialogTitle>
