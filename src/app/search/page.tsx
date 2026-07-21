@@ -2,10 +2,11 @@
 
 import { Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { SlidersHorizontal, Clock, X } from "lucide-react";
+import { Search as SearchIcon, SlidersHorizontal, Clock, X } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { VideoCard } from "@/components/video-card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -35,7 +36,12 @@ const periodHours: Record<Period, number | null> = {
 
 function SearchResults() {
   const searchParams = useSearchParams();
-  const query = searchParams.get("q") ?? "";
+  const urlQuery = searchParams.get("q") ?? "";
+
+  // Local draft so typing filters instantly without a URL round-trip per
+  // keystroke — Enter (or blur) syncs it to ?q= so the search stays
+  // shareable/bookmarkable, matching the header search box's own behavior.
+  const [queryDraft, setQueryDraft] = useState(urlQuery);
 
   const requestedCategory = searchParams.get("category");
   const [category, setCategory] = useState<string>(
@@ -50,10 +56,25 @@ function SearchResults() {
     setTags((prev) => (prev.includes(slug) ? prev.filter((t) => t !== slug) : [...prev, slug]));
   };
 
+  const syncQueryToUrl = () => {
+    const trimmed = queryDraft.trim();
+    const target = trimmed ? `/search?q=${encodeURIComponent(trimmed)}` : "/search";
+    // Deliberately not router.replace() here: in this Next build, once a
+    // page hard-loads with a search param already in the URL (e.g. a
+    // bookmarked/shared /search?q=... link, or a full page.goto in tests),
+    // router.replace/push stop updating window.location for the rest of
+    // that session — verified this isn't specific to this component (the
+    // pre-existing header search box's router.push hits the identical
+    // no-op). The native History API sidesteps Next's router state
+    // tracking entirely; we don't need Next to re-render anything here
+    // since local `queryDraft` state already drives the visible UI.
+    window.history.replaceState(null, "", target);
+  };
+
   const results = useMemo(() => {
     let list = videos.filter((v) => v.status === "active" && v.visibility === "public");
-    if (query.trim()) {
-      const q = query.toLowerCase();
+    if (queryDraft.trim()) {
+      const q = queryDraft.trim().toLowerCase();
       list = list.filter(
         (v) =>
           v.title.toLowerCase().includes(q) ||
@@ -76,22 +97,60 @@ function SearchResults() {
     if (sort === "views") sorted.sort((a, b) => b.views - a.views);
     if (sort === "recent") sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     return sorted;
-  }, [query, category, tags, period, sort, now]);
+  }, [queryDraft, category, tags, period, sort, now]);
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-8 md:px-10">
       <div className="mb-6">
         <h1 className="text-2xl font-semibold tracking-tight">Search</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {query ? (
+          {queryDraft.trim() ? (
             <>
-              Showing results for <span className="text-foreground">&ldquo;{query}&rdquo;</span>
+              Showing results for <span className="text-foreground">&ldquo;{queryDraft.trim()}&rdquo;</span>
             </>
           ) : (
             "Find videos by title, tag, or category."
           )}
         </p>
       </div>
+
+      <form
+        role="search"
+        onSubmit={(e) => {
+          e.preventDefault();
+          syncQueryToUrl();
+        }}
+        className="relative mb-6 max-w-lg"
+      >
+        <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={queryDraft}
+          onChange={(e) => setQueryDraft(e.target.value)}
+          onBlur={syncQueryToUrl}
+          placeholder="Search videos, tags, or uploaders..."
+          aria-label="Search videos, tags, or uploaders"
+          autoComplete="off"
+          className="h-10 rounded-full border-border bg-accent pl-9 pr-9 focus-visible:border-primary/50"
+        />
+        {queryDraft && (
+          <button
+            type="button"
+            aria-label="Clear search"
+            // Without this, clicking the button first blurs the input,
+            // firing syncQueryToUrl with the stale pre-clear value before
+            // this onClick runs — same fix header-search-form.tsx uses for
+            // its remove-recent-search button.
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
+              setQueryDraft("");
+              window.history.replaceState(null, "", "/search");
+            }}
+            className="absolute right-3 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground/60 hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </form>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[220px_1fr]">
         <aside className="flex flex-col gap-6">
@@ -213,11 +272,20 @@ function SearchResults() {
   );
 }
 
+function SearchResultsRemountOnQueryChange() {
+  // Remounts SearchResults (resetting its local queryDraft/filter state)
+  // whenever ?q= changes from outside this page — the header search box or
+  // a trending-tag link navigating here while /search is already mounted.
+  // Same key-remount trick HeaderSearchForm uses for the same reason.
+  const q = useSearchParams().get("q") ?? "";
+  return <SearchResults key={q} />;
+}
+
 export default function SearchPage() {
   return (
     <AppShell>
       <Suspense fallback={<div className="px-6 py-8 md:px-10 text-sm text-muted-foreground">Loading search…</div>}>
-        <SearchResults />
+        <SearchResultsRemountOnQueryChange />
       </Suspense>
     </AppShell>
   );
