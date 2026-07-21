@@ -7,7 +7,7 @@ import { AppShell } from "@/components/app-shell";
 import { VideoCard } from "@/components/video-card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { videos, categories } from "@/lib/mock-data";
+import { videos, browsableCategories } from "@/lib/mock-data";
 
 const PAGE_SIZE = 10;
 const PERIODS = [
@@ -26,15 +26,27 @@ const periodHours: Record<Period, number | null> = {
   "30d": 24 * 30,
 };
 
+// Rising/Popular/New are sort modes, not categories — they don't filter
+// which videos show up, only the order. "Rising" is the default because
+// `videos` is already sorted by rankScore (views + recency, minus reports).
+const MODES = [
+  { value: "rising", label: "Rising" },
+  { value: "popular", label: "Popular" },
+  { value: "new", label: "New" },
+] as const;
+
+type Mode = (typeof MODES)[number]["value"];
+
 export default function DiscoverPage() {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [period, setPeriod] = useState<Period>("all");
   const [category, setCategory] = useState<string>("all");
+  const [mode, setMode] = useState<Mode>("rising");
   const [now] = useState(() => Date.now());
 
   const filtered = useMemo(() => {
     const maxHours = periodHours[period];
-    return videos.filter((v) => {
+    const list = videos.filter((v) => {
       if (category !== "all" && v.category !== category) return false;
       if (maxHours !== null) {
         const hoursAgo = (now - new Date(v.createdAt).getTime()) / 3600000;
@@ -42,7 +54,10 @@ export default function DiscoverPage() {
       }
       return true;
     });
-  }, [period, category, now]);
+    if (mode === "popular") return [...list].sort((a, b) => b.views - a.views);
+    if (mode === "new") return [...list].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return list;
+  }, [period, category, mode, now]);
 
   const [top, ...rest] = filtered;
   const featured = top ? [top, ...rest.slice(0, 2)] : [];
@@ -81,8 +96,28 @@ export default function DiscoverPage() {
           </div>
         </div>
 
-        <div className="mt-5 flex flex-wrap gap-2">
-          {categories.map((c) => (
+        <div className="mt-5 flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium text-muted-foreground">Sort</span>
+          <div className="flex items-center gap-1 rounded-full border border-border bg-accent p-1 text-sm">
+            {MODES.map((m) => (
+              <button
+                key={m.value}
+                onClick={() => setMode(m.value)}
+                className={cn(
+                  "rounded-full px-3 py-1 font-medium transition-colors",
+                  mode === m.value
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-3 flex flex-wrap gap-2">
+          {browsableCategories.map((c) => (
             <button
               key={c.slug}
               onClick={() => setCategory(c.slug)}

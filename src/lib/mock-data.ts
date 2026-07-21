@@ -10,18 +10,25 @@ const pseudoCategories: Category[] = [
 ];
 
 const genreCategories: Category[] = [
-  { slug: "music", name: "Music", count: 1800 },
-  { slug: "gaming", name: "Gaming", count: 2600 },
-  { slug: "movies", name: "Movies & Animation", count: 1400 },
-  { slug: "technology", name: "Technology", count: 1900 },
-  { slug: "education", name: "Education", count: 1300 },
-  { slug: "lifestyle", name: "Lifestyle", count: 1700 },
-  { slug: "travel", name: "Travel", count: 1200 },
-  { slug: "sports", name: "Sports", count: 1000 },
-  { slug: "other", name: "Other", count: 900 },
+  { slug: "music", name: "Music", count: 1800, description: "Covers, live sessions, and original tracks." },
+  { slug: "gaming", name: "Gaming", count: 2600, description: "Gameplay, clips, highlights, and streams." },
+  { slug: "movies", name: "Movies & Animation", count: 1400, description: "Short films, animation, and fan edits." },
+  { slug: "technology", name: "Technology", count: 1900, description: "Reviews, tutorials, and tech deep-dives." },
+  { slug: "education", name: "Education", count: 1300, description: "How-tos, explainers, and lessons." },
+  { slug: "lifestyle", name: "Lifestyle", count: 1700, description: "Vlogs, routines, and everyday moments." },
+  { slug: "travel", name: "Travel", count: 1200, description: "Trip diaries and destination guides." },
+  { slug: "sports", name: "Sports", count: 1000, description: "Highlights, training, and match footage." },
+  { slug: "other", name: "Other", count: 900, description: "Everything that doesn't fit elsewhere." },
 ];
 
 export const categories: Category[] = [...pseudoCategories, ...genreCategories];
+
+// Chip/filter lists (Discover's category row, Search's category filter)
+// should never surface Popular/New — those are sort/mode filters, not
+// categories, and no video is ever tagged with those slugs so they'd
+// silently show zero results if picked as a category. Categories page
+// excludes "all" too since it has no "browse everything" tile.
+export const browsableCategories: Category[] = categories.filter((c) => c.slug !== "popular" && c.slug !== "new");
 
 export const trendingTags: Tag[] = [
   { slug: "tutorial", name: "#tutorial", count: 2300 },

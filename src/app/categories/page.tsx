@@ -44,12 +44,17 @@ export default function CategoriesPage() {
                   );
                 })}
               </div>
-              <div className="flex items-center justify-between p-4">
-                <div>
+              <div className="flex items-center justify-between gap-3 p-4">
+                <div className="min-w-0">
                   <p className="font-medium">{category.name}</p>
-                  <p className="text-xs text-muted-foreground">{formatCount(count)} videos</p>
+                  {category.description && (
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground">{category.description}</p>
+                  )}
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {count === 0 ? "No videos yet" : `${formatCount(count)} videos`}
+                  </p>
                 </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
               </div>
             </Link>
           ))}

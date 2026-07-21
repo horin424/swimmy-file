@@ -31,20 +31,20 @@ interface NavItem {
   icon: LucideIcon;
 }
 
-// Popular/Recent are filters within Discover (see period/sort controls on
-// "/"), not separate routes — the functional spec's route map (SF-UI-001
-// §3) has no standalone /popular or /recent page. Categories does have its
-// own browse page, so it's kept here unlike those two.
-const exploreItemsBase: NavItem[] = [
+// Popular/Recent are sort modes within Discover (see the Sort pill group on
+// "/"), not separate routes or categories — keeping them out of the sidebar
+// entirely, per the browsing-vs-searching split: Discover is passive
+// browsing, Search is active searching, Categories is topic browsing.
+const exploreItems: NavItem[] = [
   { href: "/", label: "Discover", icon: Compass },
   { href: "/search", label: "Search", icon: Search },
   { href: "/categories", label: "Categories", icon: LayoutGrid },
 ];
 
-// Kept out of exploreItemsBase (rather than always shown) so a guest never
-// sees an Upload link here that the header already deliberately hides for
-// them — this only gets appended for authenticated sessions, below.
-const uploadExploreItem: NavItem = { href: "/upload", label: "Upload", icon: Upload };
+// Its own section, not Explore — uploading is a creation/action, not
+// browsing. Guests never see it (same as the header's own Upload button
+// being hidden for them); only rendered for authenticated sessions, below.
+const createItems: NavItem[] = [{ href: "/upload", label: "Upload", icon: Upload }];
 
 const guestAccountItems: NavItem[] = [
   { href: "/login", label: "Sign in", icon: LogIn },
@@ -118,11 +118,11 @@ export function SidebarNav() {
     return <SidebarSkeleton />;
   }
 
-  const exploreItems = status === "authenticated" ? [...exploreItemsBase, uploadExploreItem] : exploreItemsBase;
-
   return (
     <>
       <NavSection title="Explore" items={exploreItems} pathname={pathname} />
+
+      {status === "authenticated" && user && <NavSection title="Create" items={createItems} pathname={pathname} />}
 
       {status === "guest" && <NavSection title="Account" items={guestAccountItems} pathname={pathname} />}
 

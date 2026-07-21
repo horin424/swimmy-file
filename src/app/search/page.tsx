@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { videos, categories, trendingTags } from "@/lib/mock-data";
+import { videos, browsableCategories, trendingTags } from "@/lib/mock-data";
 
 type Sort = "popular" | "recent" | "views";
 type Period = "all" | "24h" | "7d" | "30d";
@@ -45,7 +45,7 @@ function SearchResults() {
 
   const requestedCategory = searchParams.get("category");
   const [category, setCategory] = useState<string>(
-    requestedCategory && categories.some((c) => c.slug === requestedCategory) ? requestedCategory : "all",
+    requestedCategory && browsableCategories.some((c) => c.slug === requestedCategory) ? requestedCategory : "all",
   );
   const [tags, setTags] = useState<string[]>([]);
   const [period, setPeriod] = useState<Period>("all");
@@ -160,7 +160,7 @@ function SearchResults() {
               Category
             </p>
             <div className="flex flex-col gap-0.5">
-              {categories.map((c) => (
+              {browsableCategories.map((c) => (
                 <button
                   key={c.slug}
                   onClick={() => setCategory(c.slug)}
@@ -256,8 +256,9 @@ function SearchResults() {
           </div>
 
           {results.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border py-20 text-center text-sm text-muted-foreground">
-              No videos match your filters.
+            <div className="rounded-xl border border-dashed border-border py-20 text-center">
+              <p className="text-sm font-medium text-foreground">No videos found.</p>
+              <p className="mt-1 text-sm text-muted-foreground">Try another keyword or category.</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">

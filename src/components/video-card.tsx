@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Eye } from "lucide-react";
 import { VideoThumb } from "./video-thumb";
 import { ReportButton } from "./report-button";
+import { CopyLinkButton } from "./copy-link-button";
 import { cn } from "@/lib/utils";
 import { formatCount, myVideoIds } from "@/lib/mock-data";
 import type { Video } from "@/lib/types";
@@ -29,11 +30,10 @@ export function VideoCard({
               #{rank}
             </span>
           )}
-          {!isMine && (
-            <div className="absolute right-2 top-2">
-              <ReportButton variant="icon" />
-            </div>
-          )}
+          <div className="absolute right-2 top-2 flex items-center gap-1.5">
+            <CopyLinkButton url={`swimmyfile.io/v/${video.shareToken}`} variant="icon" />
+            {!isMine && <ReportButton variant="icon" />}
+          </div>
         </VideoThumb>
       </div>
       <div className="flex shrink-0 flex-col gap-1.5 p-3">

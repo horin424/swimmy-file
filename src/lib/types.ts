@@ -6,6 +6,9 @@ export interface Category {
   slug: string;
   name: string;
   count: number;
+  /** Short one-line blurb shown on the Categories page cards. Not every
+   * category has one — "All"/"Popular"/"New" are filters, not genres. */
+  description?: string;
 }
 
 export interface Tag {
