@@ -54,8 +54,8 @@ export function AccountMenu() {
           {!user.emailVerified && (
             <p className="px-1.5 pb-1 text-xs text-warning">Email verification required</p>
           )}
-          <DropdownMenuItem render={<Link href="/me" />}>My Page</DropdownMenuItem>
-          <DropdownMenuItem render={<Link href="/me?tab=settings" />}>Settings</DropdownMenuItem>
+          <DropdownMenuItem render={<Link href="/me" />}>Dashboard</DropdownMenuItem>
+          <DropdownMenuItem render={<Link href="/me/settings" />}>Settings</DropdownMenuItem>
           <DropdownMenuItem render={<Link href="/support" />}>Support</DropdownMenuItem>
           {user.role === "ADMIN" && (
             <DropdownMenuItem render={<Link href="/admin" />}>Admin</DropdownMenuItem>

@@ -1,4 +1,4 @@
-import type { Category, Tag, Video, StorageUsage } from "./types";
+import type { Category, Tag, Video, StorageUsage, UploadHistoryEntry, UploadLimits } from "./types";
 
 // "All" / "Popular" / "New" are view filters, not genres — kept separate from
 // the real category list so video generation below never assigns a video to
@@ -135,7 +135,47 @@ export const videos: Video[] = [...rawVideos]
 // this mock just claims the first 7. Exported so any page that needs to
 // know "is this my video" (e.g. hiding the Report button on my own video's
 // detail page) shares this definition instead of re-deriving it.
-export const myVideoIds: ReadonlySet<string> = new Set(videos.slice(0, 7).map((v) => v.id));
+export const myVideos: Video[] = videos.slice(0, 7);
+export const myVideoIds: ReadonlySet<string> = new Set(myVideos.map((v) => v.id));
+
+// New-account policy: 5 uploads/day, 2GB/file (see currentUserStorage below
+// for the 10GB total cap). "usedToday" is a fixed mock value, not derived
+// from myVideos' createdAt — none of those are actually "today" other than
+// the newest one.
+export const currentUserUploadLimit: UploadLimits = {
+  uploadsToday: 2,
+  dailyUploadLimit: 5,
+  maxFileSizeGb: 2,
+};
+
+// Upload History is the pipeline view (did the upload/processing/thumbnail
+// steps succeed), distinct from My Videos (the published-video management
+// view) — same underlying videos, reframed, plus one synthetic failed
+// attempt that never became a real Video record (so it has no shareToken).
+const failedUploadEntry: UploadHistoryEntry = {
+  id: "upload_failed_1",
+  title: "clip_export_final_v3.mov",
+  thumbnailGradient: gradients[gradients.length - 1],
+  createdAt: new Date(Date.now() - 5 * 3600 * 1000).toISOString(),
+  fileSizeMb: 812,
+  uploadStatus: "failed",
+  thumbnailStatus: "failed",
+  errorReason: "Unsupported file type",
+};
+
+export const uploadHistory: UploadHistoryEntry[] = [
+  failedUploadEntry,
+  ...myVideos.map((v): UploadHistoryEntry => ({
+    id: `upload_${v.id}`,
+    title: v.title,
+    thumbnailGradient: v.thumbnailGradient,
+    createdAt: v.createdAt,
+    fileSizeMb: v.fileSizeMb,
+    uploadStatus: v.status === "processing" ? "processing" : expiresIn(v.expiresAt) === "Expired" ? "expired" : "active",
+    thumbnailStatus: v.status === "processing" ? "pending" : "generated",
+    shareToken: v.shareToken,
+  })),
+].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
 const allTagSlugs: string[] = Array.from(new Set(videos.flatMap((v) => v.tags)));
 const allUploaderHandles: string[] = Array.from(new Set(videos.map((v) => v.uploader.handle)));

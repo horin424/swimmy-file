@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   Compass,
   Search,
@@ -29,10 +29,6 @@ interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
-  // For /me?tab=... destinations, which query value marks this item active —
-  // pathname alone can't distinguish Dashboard from My Videos, since they
-  // share the same route and only differ by search param.
-  tabMatch?: string;
 }
 
 // Popular/Recent are filters within Discover (see period/sort controls on
@@ -55,40 +51,26 @@ const guestAccountItems: NavItem[] = [
   { href: "/signup", label: "Create account", icon: UserPlus },
 ];
 
-// All four route through the same /me page's tab query param (see
-// me/page.tsx), not separate pages — tabMatch is what active-state
-// highlighting keys off since the pathname is identical for all of them.
+// Each links to its own route under /me — see src/app/me/{videos,uploads,settings}.
 const myAccountItems: NavItem[] = [
-  { href: "/me", label: "Dashboard", icon: LayoutDashboard, tabMatch: "dashboard" },
-  { href: "/me?tab=videos", label: "My Videos", icon: Film, tabMatch: "videos" },
-  { href: "/me?tab=uploads", label: "Upload History", icon: History, tabMatch: "uploads" },
-  { href: "/me?tab=settings", label: "Settings", icon: Settings, tabMatch: "settings" },
+  { href: "/me", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/me/videos", label: "My Videos", icon: Film },
+  { href: "/me/uploads", label: "Upload History", icon: History },
+  { href: "/me/settings", label: "Settings", icon: Settings },
   // No standalone /contact route in this build — Support already lives at
   // /support (see site-footer/site-header).
   { href: "/support", label: "Support", icon: LifeBuoy },
 ];
 
-function NavSection({
-  title,
-  items,
-  pathname,
-  activeTab,
-}: {
-  title: string;
-  items: NavItem[];
-  pathname: string;
-  activeTab: string | null;
-}) {
+function NavSection({ title, items, pathname }: { title: string; items: NavItem[]; pathname: string }) {
   return (
     <div>
       <p className="mb-1 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">{title}</p>
       <nav className="flex flex-col gap-0.5">
         {items.map((item) => {
-          const [itemPath] = item.href.split("?");
-          const active =
-            item.tabMatch !== undefined
-              ? pathname === itemPath && (activeTab ?? "dashboard") === item.tabMatch
-              : pathname === item.href;
+          // Exact match for Dashboard ("/me") so it isn't also highlighted
+          // on /me/videos etc.; other items are themselves leaf routes.
+          const active = pathname === item.href;
           const Icon = item.icon;
           return (
             <Link
@@ -129,7 +111,6 @@ export function SidebarSkeleton() {
 
 export function SidebarNav() {
   const pathname = usePathname();
-  const activeTab = useSearchParams().get("tab");
   const { status, user } = useSession();
 
   // Never render guest or protected links before the session resolves.
@@ -141,14 +122,12 @@ export function SidebarNav() {
 
   return (
     <>
-      <NavSection title="Explore" items={exploreItems} pathname={pathname} activeTab={activeTab} />
+      <NavSection title="Explore" items={exploreItems} pathname={pathname} />
 
-      {status === "guest" && (
-        <NavSection title="Account" items={guestAccountItems} pathname={pathname} activeTab={activeTab} />
-      )}
+      {status === "guest" && <NavSection title="Account" items={guestAccountItems} pathname={pathname} />}
 
       {status === "authenticated" && user && (
-        <NavSection title="My Account" items={myAccountItems} pathname={pathname} activeTab={activeTab} />
+        <NavSection title="My Account" items={myAccountItems} pathname={pathname} />
       )}
 
       <div>

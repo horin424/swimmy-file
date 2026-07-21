@@ -49,6 +49,31 @@ export interface StorageUsage {
   totalGb: number;
 }
 
+// Distinct from VideoStatus (moderation/lifecycle state of a *published*
+// video) — this tracks the upload pipeline itself, including attempts that
+// never became a real Video record.
+export type UploadPipelineStatus = "processing" | "active" | "failed" | "expired";
+export type ThumbnailPipelineStatus = "pending" | "generated" | "failed";
+
+export interface UploadHistoryEntry {
+  id: string;
+  title: string;
+  thumbnailGradient: [string, string];
+  createdAt: string;
+  fileSizeMb: number;
+  uploadStatus: UploadPipelineStatus;
+  thumbnailStatus: ThumbnailPipelineStatus;
+  errorReason?: string;
+  /** Present when the upload succeeded and has a real video/detail page. */
+  shareToken?: string;
+}
+
+export interface UploadLimits {
+  uploadsToday: number;
+  dailyUploadLimit: number;
+  maxFileSizeGb: number;
+}
+
 export type UserStatus = "active" | "banned";
 
 export interface AppUser {

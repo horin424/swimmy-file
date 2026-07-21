@@ -9,7 +9,8 @@ export function VideoThumb({
   children,
 }: {
   gradient: [string, string];
-  duration: number;
+  /** Omit to render without the duration badge (e.g. upload-pipeline entries with no playable video yet). */
+  duration?: number;
   className?: string;
   children?: React.ReactNode;
 }) {
@@ -29,9 +30,11 @@ export function VideoThumb({
           <Play className="ml-0.5 h-5 w-5 fill-white text-white" />
         </div>
       </div>
-      <span className="absolute bottom-1.5 right-1.5 rounded bg-black/55 px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-white backdrop-blur-sm">
-        {formatDuration(duration)}
-      </span>
+      {duration !== undefined && (
+        <span className="absolute bottom-1.5 right-1.5 rounded bg-black/55 px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-white backdrop-blur-sm">
+          {formatDuration(duration)}
+        </span>
+      )}
       {children}
     </div>
   );
