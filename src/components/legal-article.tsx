@@ -4,7 +4,7 @@ import { Logo } from "./logo";
 // Deliberately not AppShell — Terms/Privacy are public pages reachable
 // pre-login (e.g. from the signup form), so they must never expose the
 // logged-in app chrome: no search bar, no sidebar, no footer nav links.
-// Just a logo header back to Discover and the article itself.
+// Just a logo header back home and the article itself.
 export function LegalArticle({
   title,
   meta,

@@ -16,9 +16,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Swimmy File — Share videos. Discover what's rising.",
+  title: "Swimmy File — Upload. Share. Discover.",
   description:
-    "Upload a video, get a link instantly, and watch popular content surface naturally in Discover.",
+    "Drop a video, get a shareable link instantly. Browse what's trending in Discover once you're done.",
 };
 
 export default function RootLayout({

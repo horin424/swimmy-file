@@ -2,12 +2,15 @@ import { notFound } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { VideoCard } from "@/components/video-card";
 import { CopyLinkButton } from "@/components/copy-link-button";
+import { DownloadButton } from "@/components/download-button";
 import { ReportButton } from "@/components/report-button";
 import { VideoThumb } from "@/components/video-thumb";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Eye, CalendarClock } from "lucide-react";
-import { videos, myVideoIds, formatCount, timeAgo } from "@/lib/mock-data";
+import { Eye, CalendarClock, HardDrive, CalendarX2 } from "lucide-react";
+import { videos, myVideoIds, formatCount, formatFileSize, timeAgo } from "@/lib/mock-data";
+
+const dateFormatter = new Intl.DateTimeFormat("en-US", { year: "numeric", month: "short", day: "numeric" });
 
 export default async function VideoDetailPage({
   params,
@@ -58,12 +61,25 @@ export default async function VideoDetailPage({
                 {timeAgo(video.createdAt)}
               </span>
             </div>
+
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground/80">
+              <span className="flex items-center gap-1.5">
+                <HardDrive className="h-3.5 w-3.5" />
+                {formatFileSize(video.fileSizeMb)}
+              </span>
+              <span>Uploaded {dateFormatter.format(new Date(video.createdAt))}</span>
+              <span className="flex items-center gap-1.5">
+                <CalendarX2 className="h-3.5 w-3.5" />
+                Expires {dateFormatter.format(new Date(video.expiresAt))}
+              </span>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card/50 p-3">
             <code className="flex-1 truncate rounded-lg bg-black/30 px-3 py-2 text-sm text-muted-foreground">
               {shareUrl}
             </code>
+            <DownloadButton fileName={video.title} />
             <CopyLinkButton url={shareUrl} />
             {!isMine && <ReportButton />}
           </div>

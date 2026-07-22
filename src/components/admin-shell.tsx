@@ -104,7 +104,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             </p>
           </div>
           <Button render={<Link href="/" />} nativeButton={false}>
-            Back to Discover
+            Back to home
           </Button>
         </div>
       </AppShell>

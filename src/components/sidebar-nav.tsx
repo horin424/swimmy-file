@@ -32,11 +32,11 @@ interface NavItem {
 }
 
 // Popular/Recent are sort modes within Discover (see the Sort pill group on
-// "/"), not separate routes or categories — keeping them out of the sidebar
-// entirely, per the browsing-vs-searching split: Discover is passive
+// "/discover"), not separate routes or categories — keeping them out of the
+// sidebar entirely, per the browsing-vs-searching split: Discover is passive
 // browsing, Search is active searching, Categories is topic browsing.
 const exploreItems: NavItem[] = [
-  { href: "/", label: "Discover", icon: Compass },
+  { href: "/discover", label: "Discover", icon: Compass },
   { href: "/search", label: "Search", icon: Search },
   { href: "/categories", label: "Categories", icon: LayoutGrid },
 ];

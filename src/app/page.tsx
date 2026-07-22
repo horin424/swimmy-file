@@ -1,178 +1,112 @@
-"use client";
-
-import { useMemo, useState } from "react";
-import { Sparkles } from "lucide-react";
-import { AppShell } from "@/components/app-shell";
+import Link from "next/link";
+import { Zap, Link2, Clock3, Compass } from "lucide-react";
+import { Logo } from "@/components/logo";
+import { AccountMenu } from "@/components/account-menu";
+import { HomeUploadHero } from "@/components/home-upload-hero";
 import { VideoCard } from "@/components/video-card";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { videos, browsableCategories } from "@/lib/mock-data";
+import { SiteFooter } from "@/components/site-footer";
+import { videos } from "@/lib/mock-data";
 
-const PAGE_SIZE = 10;
-const PERIODS = [
-  { value: "all", label: "All" },
-  { value: "24h", label: "24H" },
-  { value: "7d", label: "7D" },
-  { value: "30d", label: "30D" },
-] as const;
+const features = [
+  {
+    icon: Zap,
+    title: "Instant upload",
+    description: "Drop a file and get a working share link in seconds — no account setup ceremony.",
+  },
+  {
+    icon: Link2,
+    title: "One link, shareable anywhere",
+    description: "Every upload gets a short, unique link you can drop into a chat, email, or post.",
+  },
+  {
+    icon: Clock3,
+    title: "Auto-expiring files",
+    description: "Set files to expire after a day, a week, or a month — or keep them up for good.",
+  },
+];
 
-type Period = (typeof PERIODS)[number]["value"];
+// Homepage is the upload funnel, so it only needs a taste of what's
+// public/trending — the full browse experience lives at /discover.
+const popularVideos = [...videos]
+  .filter((v) => v.status === "active" && v.visibility === "public")
+  .sort((a, b) => b.views - a.views)
+  .slice(0, 8);
 
-const periodHours: Record<Period, number | null> = {
-  all: null,
-  "24h": 24,
-  "7d": 24 * 7,
-  "30d": 24 * 30,
-};
-
-// Rising/Popular/New are sort modes, not categories — they don't filter
-// which videos show up, only the order. "Rising" is the default because
-// `videos` is already sorted by rankScore (views + recency, minus reports).
-const MODES = [
-  { value: "rising", label: "Rising" },
-  { value: "popular", label: "Popular" },
-  { value: "new", label: "New" },
-] as const;
-
-type Mode = (typeof MODES)[number]["value"];
-
-export default function DiscoverPage() {
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  const [period, setPeriod] = useState<Period>("all");
-  const [category, setCategory] = useState<string>("all");
-  const [mode, setMode] = useState<Mode>("rising");
-  const [now] = useState(() => Date.now());
-
-  const filtered = useMemo(() => {
-    const maxHours = periodHours[period];
-    const list = videos.filter((v) => {
-      if (category !== "all" && v.category !== category) return false;
-      if (maxHours !== null) {
-        const hoursAgo = (now - new Date(v.createdAt).getTime()) / 3600000;
-        if (hoursAgo > maxHours) return false;
-      }
-      return true;
-    });
-    if (mode === "popular") return [...list].sort((a, b) => b.views - a.views);
-    if (mode === "new") return [...list].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    return list;
-  }, [period, category, mode, now]);
-
-  const [top, ...rest] = filtered;
-  const featured = top ? [top, ...rest.slice(0, 2)] : [];
-  const grid = rest.slice(2);
-  const visibleGrid = grid.slice(0, visibleCount);
-  const hasMore = visibleCount < grid.length;
-
+export default function HomePage() {
   return (
-    <AppShell>
-      <section className="border-b border-border px-6 py-6 md:px-10 md:py-8">
-        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-              Discover <span className="text-primary">Swimmy File</span>
-            </h1>
-            <p className="mt-1.5 max-w-lg text-sm text-muted-foreground">
-              Upload a video, get a shareable link in seconds, and let public uploads surface here as
-              they&apos;re watched.
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-1 rounded-full border border-border bg-accent p-1 text-sm">
-            {PERIODS.map((p) => (
-              <button
-                key={p.value}
-                onClick={() => setPeriod(p.value)}
-                className={cn(
-                  "rounded-full px-3.5 py-1.5 font-medium transition-colors",
-                  period === p.value
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
+    <div className="flex min-h-screen flex-col bg-ocean">
+      <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur-xl md:px-6">
+        <Link href="/" className="flex shrink-0">
+          <Logo />
+        </Link>
+        <div className="flex items-center gap-4">
+          <Link
+            href="/discover"
+            className="hidden items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground sm:flex"
+          >
+            <Compass className="h-4 w-4" />
+            Discover
+          </Link>
+          <AccountMenu />
         </div>
+      </header>
 
-        <div className="mt-5 flex flex-wrap items-center gap-2">
-          <span className="text-xs font-medium text-muted-foreground">Sort</span>
-          <div className="flex items-center gap-1 rounded-full border border-border bg-accent p-1 text-sm">
-            {MODES.map((m) => (
-              <button
-                key={m.value}
-                onClick={() => setMode(m.value)}
-                className={cn(
-                  "rounded-full px-3 py-1 font-medium transition-colors",
-                  mode === m.value
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {m.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="mt-3 flex flex-wrap gap-2">
-          {browsableCategories.map((c) => (
-            <button
-              key={c.slug}
-              onClick={() => setCategory(c.slug)}
-              className={cn(
-                "rounded-full px-3 py-1.5 text-sm font-medium transition-colors",
-                category === c.slug
-                  ? "bg-primary/15 text-primary"
-                  : "border border-border text-muted-foreground hover:border-border-strong hover:text-foreground",
-              )}
-            >
-              {c.name}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <section className="px-6 py-8 md:px-10">
-        <div className="mb-4 flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-warning" />
-          <h2 className="text-lg font-semibold">Rising now</h2>
-        </div>
-        {featured.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-border py-12 text-center text-sm text-muted-foreground">
-            No videos match these filters yet.
+      <main className="flex-1">
+        <section className="mx-auto flex max-w-3xl flex-col items-center px-6 py-16 text-center md:py-24">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+            Upload. Share. Discover.
           </p>
-        ) : (
-          // Capped narrower than the rest of the page at lg+ — at full content
-          // width these cards (16:9, so height scales with width) get taller
-          // than intended; ~18% narrower keeps the ratio but trims the height.
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:max-w-[82%]">
-            {featured.map((v, idx) => (
-              <VideoCard key={v.id} video={v} featured={idx === 0} />
-            ))}
-          </div>
-        )}
-      </section>
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-balance md:text-4xl">
+            Send any video with a link, instantly.
+          </h1>
+          <p className="mt-2 max-w-lg text-sm text-muted-foreground md:text-base">
+            Swimmy File is a file-sharing service first — drop a video below and get a link to
+            share right away.
+          </p>
 
-      {grid.length > 0 && (
-        <section className="px-6 pb-16 md:px-10">
-          <div className="mb-4">
-            <h2 className="text-lg font-semibold">More videos</h2>
+          <div className="mt-10 w-full">
+            <HomeUploadHero />
           </div>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-            {visibleGrid.map((v) => (
-              <VideoCard key={v.id} video={v} />
-            ))}
-          </div>
-          {hasMore && (
-            <div className="mt-6 flex justify-center">
-              <Button variant="outline" onClick={() => setVisibleCount((n) => n + PAGE_SIZE)}>
-                Load more
+        </section>
+
+        <section className="border-t border-border px-6 py-14 md:px-10">
+          <div className="mx-auto max-w-6xl">
+            <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold">Popular videos</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  A look at what&apos;s public and trending right now.
+                </p>
+              </div>
+              <Button variant="outline" size="sm" render={<Link href="/discover" />} nativeButton={false}>
+                Open Discover
               </Button>
             </div>
-          )}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              {popularVideos.map((v) => (
+                <VideoCard key={v.id} video={v} />
+              ))}
+            </div>
+          </div>
         </section>
-      )}
-    </AppShell>
+
+        <section className="border-t border-border px-6 py-14 md:px-10">
+          <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 sm:grid-cols-3">
+            {features.map((f) => (
+              <div key={f.title} className="rounded-2xl border border-border bg-card/40 p-5">
+                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                  <f.icon className="h-5 w-5" />
+                </div>
+                <h3 className="text-sm font-semibold">{f.title}</h3>
+                <p className="mt-1.5 text-sm text-muted-foreground">{f.description}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      </main>
+
+      <SiteFooter />
+    </div>
   );
 }
