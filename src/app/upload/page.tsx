@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -105,8 +104,9 @@ export default function UploadPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [visibility, setVisibility] = useState<"public" | "private">("public");
-  const [tags, setTags] = useState<string[]>(["night", "ocean"]);
-  const [tagDraft, setTagDraft] = useState("");
+  const [tagsInput, setTagsInput] = useState("night, ocean");
+  const [category, setCategory] = useState<string>(categories[4]?.slug ?? "");
+  const [expiryDate, setExpiryDate] = useState("");
   const [published, setPublished] = useState(false);
 
   // Same wording as the sidebar/account-menu unverified-state notices, so
@@ -167,12 +167,6 @@ export default function UploadPage() {
     },
     [file, requireVerifiedEmail],
   );
-
-  const addTag = () => {
-    const v = tagDraft.trim().replace(/^#/, "");
-    if (v && !tags.includes(v)) setTags((t) => [...t, v]);
-    setTagDraft("");
-  };
 
   const storagePct = Math.round((currentUserStorage.usedGb / currentUserStorage.totalGb) * 100);
   const canPublish = Boolean(file) && title.trim().length > 0;
@@ -343,112 +337,99 @@ export default function UploadPage() {
                 />
               </div>
   
-              <div>
-                <Label className="mb-2 text-xs text-muted-foreground">Privacy</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={() => setVisibility("public")}
-                    className={cn(
-                      "flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
-                      visibility === "public"
-                        ? "border-primary/50 bg-primary/15 text-primary"
-                        : "border-border text-muted-foreground hover:border-border-strong",
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="video-tags" className="mb-2 text-xs text-muted-foreground">
+                    Tags
+                  </Label>
+                  <Input
+                    id="video-tags"
+                    value={tagsInput}
+                    onChange={(e) => setTagsInput(e.target.value)}
+                    placeholder="gaming, tutorial, funny"
+                  />
+                  <p className="mt-1.5 text-xs text-muted-foreground/70">Comma-separated</p>
+                </div>
+
+                <div>
+                  <Label className="mb-2 text-xs text-muted-foreground">Category</Label>
+                  <Select
+                    value={category}
+                    onValueChange={(v) => setCategory(v ?? "")}
+                    items={Object.fromEntries(
+                      categories
+                        .filter((c) => c.slug !== "all" && c.slug !== "popular" && c.slug !== "new")
+                        .map((c) => [c.slug, c.name]),
                     )}
                   >
-                    <Globe2 className="h-4 w-4" />
-                    Public
-                  </button>
-                  <button
-                    onClick={() => setVisibility("private")}
-                    className={cn(
-                      "flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
-                      visibility === "private"
-                        ? "border-primary/50 bg-primary/15 text-primary"
-                        : "border-border text-muted-foreground hover:border-border-strong",
-                    )}
-                  >
-                    <Lock className="h-4 w-4" />
-                    Private
-                  </button>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories
+                        .filter((c) => c.slug !== "all" && c.slug !== "popular" && c.slug !== "new")
+                        .map((c) => (
+                          <SelectItem key={c.slug} value={c.slug}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <p className="mt-1.5 text-xs text-muted-foreground/70">
-                  {visibility === "public"
-                    ? "Public files can be discovered in Swimmy Ocean and search results."
-                    : "Private files are only visible to people with the link."}
-                </p>
               </div>
-  
-              <div>
-                <Label className="mb-2 text-xs text-muted-foreground">Expiration</Label>
-                <Select
-                  defaultValue="7"
-                  items={{ "1": "1 day", "7": "7 days", "30": "30 days", "0": "No expiration" }}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Expiration" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">1 day</SelectItem>
-                    <SelectItem value="7">7 days</SelectItem>
-                    <SelectItem value="30">30 days</SelectItem>
-                    <SelectItem value="0">No expiration</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="mt-1.5 text-xs text-muted-foreground/70">
-                  After expiration, the file and link will be deleted.
-                </p>
-              </div>
-  
-              <div>
-                <Label className="mb-2 text-xs text-muted-foreground">Category</Label>
-                <Select
-                  defaultValue={categories[4]?.slug}
-                  items={Object.fromEntries(
-                    categories
-                      .filter((c) => c.slug !== "all" && c.slug !== "popular" && c.slug !== "new")
-                      .map((c) => [c.slug, c.name]),
-                  )}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories
-                      .filter((c) => c.slug !== "all" && c.slug !== "popular" && c.slug !== "new")
-                      .map((c) => (
-                        <SelectItem key={c.slug} value={c.slug}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-  
-              <div>
-                <Label className="mb-2 text-xs text-muted-foreground">Tags (optional)</Label>
-                <div className="mb-2 flex flex-wrap gap-1.5">
-                  {tags.map((t) => (
-                    <Badge key={t} variant="secondary" className="gap-1 pr-1.5">
-                      {t}
-                      <button onClick={() => setTags((prev) => prev.filter((x) => x !== t))} aria-label={`Remove tag ${t}`}>
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="mb-2 text-xs text-muted-foreground">Visibility</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => setVisibility("public")}
+                      className={cn(
+                        "flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+                        visibility === "public"
+                          ? "border-primary/50 bg-primary/15 text-primary"
+                          : "border-border text-muted-foreground hover:border-border-strong",
+                      )}
+                    >
+                      <Globe2 className="h-4 w-4" />
+                      Public
+                    </button>
+                    <button
+                      onClick={() => setVisibility("private")}
+                      className={cn(
+                        "flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+                        visibility === "private"
+                          ? "border-primary/50 bg-primary/15 text-primary"
+                          : "border-border text-muted-foreground hover:border-border-strong",
+                      )}
+                    >
+                      <Lock className="h-4 w-4" />
+                      Private
+                    </button>
+                  </div>
                 </div>
-                <Input
-                  value={tagDraft}
-                  onChange={(e) => setTagDraft(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      addTag();
-                    }
-                  }}
-                  placeholder="Add a tag and press Enter"
-                />
+
+                <div>
+                  <Label htmlFor="video-expiry" className="mb-2 text-xs text-muted-foreground">
+                    Expiry date
+                  </Label>
+                  <Input
+                    id="video-expiry"
+                    type="date"
+                    value={expiryDate}
+                    min={new Date().toISOString().slice(0, 10)}
+                    onChange={(e) => setExpiryDate(e.target.value)}
+                  />
+                </div>
               </div>
-  
+              <p className="-mt-3 text-xs text-muted-foreground/70">
+                {visibility === "public"
+                  ? "Public files can be discovered in Swimmy Ocean and search results."
+                  : "Private files are only visible to people with the link."}
+                {" "}
+                {expiryDate ? "After the expiry date, the file and link will be deleted." : "Leave the expiry date blank to keep this file up indefinitely."}
+              </p>
+
               <Button
                 disabled={!canPublish}
                 className="mt-1 w-full bg-gradient-brand text-white hover:opacity-90"
