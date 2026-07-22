@@ -15,7 +15,7 @@ export function UploadButton() {
 
   return (
     <Button
-      render={<Link href="/upload" />}
+      render={<Link href="/" />}
       nativeButton={false}
       size="sm"
       className="hidden gap-1.5 bg-gradient-brand text-white hover:opacity-90 sm:flex"

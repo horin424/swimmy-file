@@ -44,7 +44,7 @@ const exploreItems: NavItem[] = [
 // Its own section, not Explore — uploading is a creation/action, not
 // browsing. Guests never see it (same as the header's own Upload button
 // being hidden for them); only rendered for authenticated sessions, below.
-const createItems: NavItem[] = [{ href: "/upload", label: "Upload", icon: Upload }];
+const createItems: NavItem[] = [{ href: "/", label: "Upload", icon: Upload }];
 
 const guestAccountItems: NavItem[] = [
   { href: "/login", label: "Sign in", icon: LogIn },

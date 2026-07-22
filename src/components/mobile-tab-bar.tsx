@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 const items = [
   { href: "/discover", label: "Discover", icon: Compass },
   { href: "/search", label: "Search", icon: Search },
-  { href: "/upload", label: "Upload", icon: Upload },
+  { href: "/", label: "Upload", icon: Upload },
   { href: "/me", label: "Me", icon: User },
 ];
 
@@ -18,9 +18,12 @@ export function MobileTabBar() {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 flex items-stretch border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden">
       {items.map((item) => {
-        const active = pathname.startsWith(item.href);
+        // Upload's href is "/" (the homepage), which is a prefix of every
+        // path — startsWith would wrongly mark it active everywhere, so it
+        // needs an exact match instead of the other tabs' prefix match.
+        const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
         const Icon = item.icon;
-        const isUpload = item.href === "/upload";
+        const isUpload = item.href === "/";
         return (
           <Link
             key={item.href}

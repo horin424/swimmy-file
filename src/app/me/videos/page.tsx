@@ -103,7 +103,7 @@ export default function MyVideosPage() {
         </div>
         <div className="flex items-center gap-2">
           <Button
-            render={<Link href="/upload" />}
+            render={<Link href="/" />}
             nativeButton={false}
             variant="outline"
             size="sm"
@@ -164,7 +164,7 @@ export default function MyVideosPage() {
             <p className="mt-1 text-sm text-muted-foreground">Upload your first video to create a shareable link.</p>
           </div>
           <Button
-            render={<Link href="/upload" />}
+            render={<Link href="/" />}
             nativeButton={false}
             className="gap-1.5 bg-gradient-brand text-white hover:opacity-90"
           >

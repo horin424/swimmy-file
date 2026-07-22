@@ -58,7 +58,7 @@ export default function DashboardPage() {
 
         <div className="flex flex-wrap gap-2">
           <Button
-            render={<Link href="/upload" />}
+            render={<Link href="/" />}
             nativeButton={false}
             size="sm"
             className="gap-1.5 bg-gradient-brand text-white hover:opacity-90"
