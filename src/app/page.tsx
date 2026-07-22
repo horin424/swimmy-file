@@ -58,11 +58,10 @@ export default function HomePage() {
             Upload. Share. Discover.
           </p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight text-balance md:text-4xl">
-            Send any video with a link, instantly.
+            Upload files and share them instantly.
           </h1>
           <p className="mt-2 max-w-lg text-sm text-muted-foreground md:text-base">
-            Swimmy File is a file-sharing service first — drop a video below and get a link to
-            share right away.
+            Drop a file below, get a link, and share it right away.
           </p>
 
           <div className="mt-10 w-full">
@@ -74,7 +73,7 @@ export default function HomePage() {
           <div className="mx-auto max-w-6xl">
             <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
               <div>
-                <h2 className="text-lg font-semibold">Popular videos</h2>
+                <h2 className="text-lg font-semibold">Popular public uploads</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
                   A look at what&apos;s public and trending right now.
                 </p>

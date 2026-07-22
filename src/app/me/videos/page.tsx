@@ -183,7 +183,7 @@ export default function MyVideosPage() {
               key={v.id}
               className="flex flex-col gap-3 rounded-xl border border-border bg-card/40 p-2.5 sm:flex-row sm:items-center"
             >
-              <Link href={`/v/${v.shareToken}`} className="h-14 w-24 shrink-0 overflow-hidden rounded-lg">
+              <Link href={`/d/${v.shareToken}`} className="h-14 w-24 shrink-0 overflow-hidden rounded-lg">
                 <VideoThumb gradient={v.thumbnailGradient} duration={v.durationSeconds} className="rounded-lg" />
               </Link>
               <div className="min-w-0 flex-1">
@@ -211,7 +211,7 @@ export default function MyVideosPage() {
                   <TooltipTrigger
                     render={
                       <Button
-                        render={<Link href={`/v/${v.shareToken}`} target="_blank" />}
+                        render={<Link href={`/d/${v.shareToken}`} target="_blank" />}
                         nativeButton={false}
                         variant="ghost"
                         size="icon-sm"
@@ -235,7 +235,7 @@ export default function MyVideosPage() {
                         className="text-muted-foreground"
                         onClick={async () => {
                           try {
-                            await navigator.clipboard.writeText(`https://swimmyfile.io/v/${v.shareToken}`);
+                            await navigator.clipboard.writeText(`https://swimmyfile.io/d/${v.shareToken}`);
                           } catch {
                             // clipboard API unavailable — still show optimistic feedback in this prototype
                           }

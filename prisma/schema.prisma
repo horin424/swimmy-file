@@ -81,6 +81,18 @@ enum InquiryStatus {
   CLOSED
 }
 
+enum UploaderType {
+  GUEST
+  USER
+}
+
+// Not wired into any billing logic yet (MVP has no payment) — exists so
+// paid capacity can be added later without a breaking schema change.
+enum StorageEntitlementSource {
+  MANUAL
+  STRIPE
+}
+
 // --- Models -------------------------------------------------------------
 
 model User {
@@ -98,14 +110,26 @@ model User {
   inquiries   Inquiry[]
   adminLogs   AdminLog[]   @relation("AdminActor")
   uploadLimit UploadLimit?
+  // Not wired into any billing logic yet — see StorageEntitlement below.
+  storageEntitlements StorageEntitlement[]
 
   @@index([status])
   @@map("users")
 }
 
 model Video {
-  id               String      @id @default(cuid())
-  userId           String
+  id           String       @id @default(cuid())
+  uploaderType UploaderType @default(USER)
+  // Nullable to support guest uploads (MVP policy: guests can upload up to
+  // 1GB cumulative per IP before being required to log in — see
+  // GuestUploadUsage below). Always set for uploaderType = USER, always
+  // null for uploaderType = GUEST.
+  userId       String?
+  // hash(ip + IP_HASH_SALT) of the uploading request's IP, only set for
+  // guest uploads — ties this row to the same GuestUploadUsage bucket that
+  // enforces the cumulative cap. Never store the raw IP (see
+  // GuestUploadUsage's own note and .env.example's IP_HASH_SALT).
+  ipHash       String?
   title            String
   description      String?
   storagePath      String
@@ -121,6 +145,7 @@ model Video {
   status           VideoStatus @default(UPLOADING)
   shareToken       String      @unique
   viewCount        Int         @default(0)
+  downloadCount    Int         @default(0)
   reportCount      Int         @default(0)
   // Videos are intentionally excluded from Discover until explicitly enabled
   // (anti-spam gate from the design doc), regardless of status/visibility.
@@ -136,7 +161,11 @@ model Video {
   categoryId String?
   category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
-  uploader  User       @relation(fields: [userId], references: [id], onDelete: Restrict)
+  // SetNull rather than Restrict: now that guest uploads exist (userId
+  // already nullable for them), a user closing their account shouldn't be
+  // blocked by files they shared — those links just stop being "owned" by
+  // anyone, same as a guest upload always was.
+  uploader  User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
   tags      VideoTag[]
   reports   Report[]
   inquiries Inquiry[]
@@ -147,6 +176,7 @@ model Video {
   @@index([viewCount])
   @@index([reportCount])
   @@index([discoverEnabled])
+  @@index([ipHash])
   // Composite index matching the actual Discover feed query pattern
   // (WHERE visibility = PUBLIC AND status = ACTIVE AND discoverEnabled = true
   // ORDER BY createdAt DESC) — the single-column indexes above satisfy the
@@ -226,12 +256,70 @@ model UploadLimit {
   // Bytes. 10GB (the default total-storage cap) exceeds Int32 range, same
   // reasoning as Video.fileSize — must be BigInt.
   storageUsed  BigInt     @default(0)
+  // Explicit stored cap rather than a value derived purely from trustLevel
+  // in app code — lets a future paid plan (see Plan/StorageEntitlement
+  // below) raise this per-user without changing the trust-level ladder.
+  // Nullable so existing rows can fall back to the trust-level default
+  // until backfilled.
+  storageLimitBytes BigInt?
   trustLevel   TrustLevel @default(NEW)
   lastResetAt  DateTime   @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("upload_limits")
+}
+
+// Guest (not-logged-in) upload policy: up to 1GB cumulative per IP before
+// requiring login/signup (see GET /api/upload/eligibility in
+// src/lib/upload-eligibility.ts for the frontend contract this backs).
+// One row per hashed IP — never the raw address.
+model GuestUploadUsage {
+  id     String @id @default(cuid())
+  // hash(ip + IP_HASH_SALT). IP_HASH_SALT is an env var (see .env.example)
+  // so the hash isn't reversible without it, and can be rotated.
+  ipHash String @unique
+
+  // Bytes. Same BigInt reasoning as Video.fileSize/UploadLimit.storageUsed.
+  totalUploadedBytes BigInt   @default(0)
+  lastUploadedAt     DateTime @default(now())
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@map("guest_upload_usage")
+}
+
+// --- Future billing extension (not implemented, not referenced by any
+// logic yet) ---------------------------------------------------------------
+// Kept here so adding paid capacity later is additive (new rows/relations)
+// rather than a schema migration that touches Video/User/UploadLimit.
+
+model Plan {
+  id                String @id @default(cuid())
+  name              String
+  storageLimitBytes BigInt
+  maxFileSizeBytes  BigInt
+  // Integer minor units (cents), not a float — avoids floating-point
+  // rounding errors on money. $9.99 = 999.
+  priceCents        Int
+  createdAt         DateTime @default(now())
+
+  @@map("plans")
+}
+
+model StorageEntitlement {
+  id                     String                    @id @default(cuid())
+  userId                 String
+  additionalStorageBytes BigInt
+  source                 StorageEntitlementSource
+  // Null = doesn't expire (e.g. a one-time manual grant).
+  expiresAt              DateTime?
+  createdAt              DateTime                  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("storage_entitlements")
 }
 
 model AdminLog {

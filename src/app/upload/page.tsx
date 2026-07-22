@@ -26,7 +26,7 @@ import {
   HardDrive,
   CircleCheck,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatBytes } from "@/lib/utils";
 import { categories, currentUserStorage } from "@/lib/mock-data";
 import { useSession } from "@/lib/session";
 import { toast } from "sonner";
@@ -43,11 +43,6 @@ interface UploadItem {
 
 // New-account policy: 2GB per file (see currentUserStorage note below / terms page).
 const MAX_FILE_SIZE_BYTES = 2 * 1024 ** 3;
-
-function formatBytes(bytes: number) {
-  if (bytes < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(0)} MB`;
-  return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
-}
 
 // Client-side stand-in for the server-side thumbnail pipeline (Lambda/FFmpeg,
 // per the design doc) so uploaders get an instant preview. Seeks into the

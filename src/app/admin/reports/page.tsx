@@ -79,7 +79,7 @@ export default function AdminReportsPage() {
                 </div>
 
                 <Link
-                  href={`/v/${r.shareToken}`}
+                  href={`/d/${r.shareToken}`}
                   target="_blank"
                   className="flex items-center gap-1.5 font-medium hover:text-primary"
                 >

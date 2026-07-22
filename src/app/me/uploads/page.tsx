@@ -52,7 +52,7 @@ export default function UploadHistoryPage() {
           >
             <div className="h-14 w-24 shrink-0 overflow-hidden rounded-lg">
               {entry.shareToken ? (
-                <Link href={`/v/${entry.shareToken}`} className="block h-full w-full">
+                <Link href={`/d/${entry.shareToken}`} className="block h-full w-full">
                   <VideoThumb gradient={entry.thumbnailGradient} className="rounded-lg" />
                 </Link>
               ) : (

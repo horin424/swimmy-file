@@ -77,6 +77,22 @@ export interface UploadLimits {
   maxFileSizeGb: number;
 }
 
+// Mirrors the response shape of the planned GET /api/upload/eligibility
+// endpoint (see useUploadEligibility in lib/upload-eligibility.ts) so
+// swapping the mock implementation for a real fetch is a drop-in change —
+// nothing that reads this type needs to know which one it's talking to.
+export type UploadEligibilityReason = "GUEST_LIMIT_REACHED" | "EMAIL_VERIFICATION_REQUIRED" | null;
+
+export interface UploadEligibility {
+  canUpload: boolean;
+  userType: "guest" | "user";
+  guestLimitBytes: number;
+  guestUsedBytes: number;
+  guestRemainingBytes: number;
+  requiresLogin: boolean;
+  reason: UploadEligibilityReason;
+}
+
 export type UserStatus = "active" | "banned";
 
 export interface AppUser {

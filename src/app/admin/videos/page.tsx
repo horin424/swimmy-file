@@ -88,7 +88,7 @@ export default function AdminVideosPage() {
               <div key={v.id} className="rounded-xl border border-border bg-card/40 p-3">
                 <div className="flex items-start justify-between gap-2">
                   <Link
-                    href={`/v/${v.shareToken}`}
+                    href={`/d/${v.shareToken}`}
                     target="_blank"
                     className="flex min-w-0 items-center gap-1.5 font-medium hover:text-primary"
                   >
@@ -132,7 +132,7 @@ export default function AdminVideosPage() {
                   <TableRow key={v.id}>
                     <TableCell className="max-w-xs">
                       <Link
-                        href={`/v/${v.shareToken}`}
+                        href={`/d/${v.shareToken}`}
                         target="_blank"
                         className="flex items-center gap-1.5 truncate font-medium hover:text-primary"
                       >

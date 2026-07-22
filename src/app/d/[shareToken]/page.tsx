@@ -22,7 +22,7 @@ export default async function VideoDetailPage({
   if (!video) notFound();
 
   const related = videos.filter((v) => v.id !== video.id && v.category === video.category).slice(0, 6);
-  const shareUrl = `swimmyfile.io/v/${video.shareToken}`;
+  const shareUrl = `swimmyfile.io/d/${video.shareToken}`;
   // You can't report your own upload — this is one of "my files".
   const isMine = myVideoIds.has(video.id);
 

@@ -151,7 +151,7 @@ export default function DashboardPage() {
             {recentUploads.slice(0, 4).map((v) => (
               <Link
                 key={v.id}
-                href={`/v/${v.shareToken}`}
+                href={`/d/${v.shareToken}`}
                 className="flex items-center gap-3 rounded-lg border border-border px-3 py-2 transition-colors hover:border-border-strong"
               >
                 <div className="h-9 w-14 shrink-0 overflow-hidden rounded-md">

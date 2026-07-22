@@ -20,7 +20,7 @@ export function VideoCard({
 
   return (
     <Link
-      href={`/v/${video.shareToken}`}
+      href={`/d/${video.shareToken}`}
       className="group flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card transition-colors duration-150 hover:border-border-strong"
     >
       <div className="relative aspect-video w-full">
@@ -31,7 +31,7 @@ export function VideoCard({
             </span>
           )}
           <div className="absolute right-2 top-2 flex items-center gap-1.5">
-            <CopyLinkButton url={`swimmyfile.io/v/${video.shareToken}`} variant="icon" />
+            <CopyLinkButton url={`swimmyfile.io/d/${video.shareToken}`} variant="icon" />
             {!isMine && <ReportButton variant="icon" />}
           </div>
         </VideoThumb>

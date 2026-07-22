@@ -205,7 +205,7 @@ export function getSearchSuggestions(query: string, limit = 8): SearchSuggestion
   const videoMatches: SearchSuggestion[] = videos
     .filter((v) => v.status === "active" && v.visibility === "public" && v.title.toLowerCase().includes(q))
     .slice(0, 4)
-    .map((v) => ({ type: "video", label: v.title, sublabel: `@${v.uploader.handle}`, href: `/v/${v.shareToken}` }));
+    .map((v) => ({ type: "video", label: v.title, sublabel: `@${v.uploader.handle}`, href: `/d/${v.shareToken}` }));
 
   const tagMatches: SearchSuggestion[] = allTagSlugs
     .filter((t) => t.includes(q))

@@ -97,7 +97,7 @@ export default function SupportPage() {
               <Label htmlFor="related-url" className="mb-1.5 text-xs text-muted-foreground">
                 Related video link (optional)
               </Label>
-              <Input id="related-url" placeholder="swimmyfile.io/v/..." />
+              <Input id="related-url" placeholder="swimmyfile.io/d/..." />
             </div>
 
             <div>

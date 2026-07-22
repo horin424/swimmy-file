@@ -1,9 +1,20 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
-import QRCode from "qrcode";
-import { UploadCloud, Copy, Check, QrCode, ExternalLink, RotateCw, CircleCheck } from "lucide-react";
+import {
+  UploadCloud,
+  Copy,
+  Check,
+  QrCode,
+  ExternalLink,
+  RotateCw,
+  CircleCheck,
+  TriangleAlert,
+  MailWarning,
+  LogIn,
+  UserPlus,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -13,99 +24,30 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
-import { videos } from "@/lib/mock-data";
+import { cn, formatBytes } from "@/lib/utils";
+import { GUEST_UPLOAD_LIMIT_BYTES } from "@/lib/upload-eligibility";
+import { useUploadFlow } from "@/lib/use-upload-flow";
 import { toast } from "sonner";
 
-const MAX_FILE_SIZE_BYTES = 2 * 1024 ** 3;
-
-function formatBytes(bytes: number) {
-  if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(0)} KB`;
-  if (bytes < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
-  return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
+// Shared card shell every non-dropzone stage below renders into, so they
+// all read as one consistent "state screen" rather than differently-shaped
+// blocks bolted onto the hero.
+function StateCard({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="w-full rounded-3xl border border-border bg-card/60 px-6 py-10 text-center sm:py-12">
+      {children}
+    </div>
+  );
 }
 
-type Stage = "idle" | "uploading" | "complete";
-
-// Gofile-style: this IS the upload flow, not a CTA into one. No account
-// required — matches the client's explicit "no signup required" direction.
-// Fully mock for now (see bottom of file for what a real backend swaps in).
 export function HomeUploadHero() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
-  const [stage, setStage] = useState<Stage>("idle");
-  const [fileName, setFileName] = useState("");
-  const [fileSize, setFileSize] = useState(0);
-  const [progress, setProgress] = useState(0);
-  const [shareToken, setShareToken] = useState("");
-  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
-  const [qrOpen, setQrOpen] = useState(false);
   const [copied, setCopied] = useState(false);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  // Mirrors `progress` so the interval tick can check "did we just cross
-  // 100?" synchronously, without a separate effect reacting to state.
-  const progressRef = useRef(0);
+  const [qrOpen, setQrOpen] = useState(false);
+  const { state, selectFile, cancel, reset } = useUploadFlow();
 
-  const displayUrl = shareToken ? `swimmyfile.io/v/${shareToken}` : "";
-  const hrefUrl = shareToken ? `/v/${shareToken}` : "";
-
-  const reset = useCallback(() => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    intervalRef.current = null;
-    setStage("idle");
-    setFileName("");
-    setFileSize(0);
-    setProgress(0);
-    progressRef.current = 0;
-    setShareToken("");
-    setQrDataUrl(null);
-    setCopied(false);
-  }, []);
-
-  // Mock stand-in for the real POST /api/uploads response — picks an
-  // existing demo video so "Open link" leads somewhere real instead of a
-  // 404, until there's a backend that actually creates a video record.
-  const finishUpload = useCallback(() => {
-    const demo = videos[Math.floor(Math.random() * Math.min(videos.length, 12))];
-    setShareToken(demo.shareToken);
-    QRCode.toDataURL(`${window.location.origin}/v/${demo.shareToken}`, { margin: 1, width: 220 })
-      .then(setQrDataUrl)
-      .catch(() => setQrDataUrl(null));
-    setStage("complete");
-  }, []);
-
-  const startUpload = useCallback(
-    (file: File) => {
-      if (file.size > MAX_FILE_SIZE_BYTES) {
-        toast.error(`"${file.name}" is ${formatBytes(file.size)} — the limit is 2GB per file.`);
-        return;
-      }
-      setFileName(file.name);
-      setFileSize(file.size);
-      setProgress(0);
-      progressRef.current = 0;
-      setStage("uploading");
-      intervalRef.current = setInterval(() => {
-        const next = Math.min(100, progressRef.current + Math.random() * 20 + 8);
-        progressRef.current = next;
-        setProgress(next);
-        if (next >= 100) {
-          if (intervalRef.current) clearInterval(intervalRef.current);
-          intervalRef.current = null;
-          finishUpload();
-        }
-      }, 350);
-    },
-    [finishUpload],
-  );
-
-  useEffect(() => {
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, []);
-
-  const handleCopy = async () => {
+  const handleCopy = async (displayUrl: string) => {
     try {
       await navigator.clipboard.writeText(`https://${displayUrl}`);
     } catch {
@@ -116,30 +58,40 @@ export function HomeUploadHero() {
     setTimeout(() => setCopied(false), 1800);
   };
 
-  if (stage === "uploading") {
+  if (state.stage === "checking") {
     return (
-      <div className="w-full rounded-3xl border border-border bg-card/60 px-6 py-10 text-center sm:py-12">
-        <p className="text-lg font-medium">Uploading…</p>
-        <p className="mt-3 truncate text-sm text-muted-foreground">{fileName}</p>
-        <div className="mx-auto mt-5 max-w-md">
-          <Progress value={progress} className="h-2" />
-          <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-            <span>
-              {formatBytes((fileSize * progress) / 100)} / {formatBytes(fileSize)}
-            </span>
-            <span className="tabular-nums">{Math.round(progress)}%</span>
-          </div>
-        </div>
-        <Button variant="outline" size="sm" className="mt-6" onClick={reset}>
-          Cancel
-        </Button>
-      </div>
+      <StateCard>
+        <div className="mx-auto h-10 w-10 animate-pulse rounded-full bg-primary/20" />
+        <p className="mt-4 text-sm text-muted-foreground">Checking upload availability…</p>
+      </StateCard>
     );
   }
 
-  if (stage === "complete") {
+  if (state.stage === "uploading") {
     return (
-      <div className="w-full rounded-3xl border border-border bg-card/60 px-6 py-10 text-center sm:py-12">
+      <StateCard>
+        <p className="text-lg font-medium">Uploading…</p>
+        <p className="mt-3 truncate text-sm text-muted-foreground">{state.fileName}</p>
+        <div className="mx-auto mt-5 max-w-md">
+          <Progress value={state.progress} className="h-2" />
+          <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+            <span>
+              {formatBytes((state.fileSizeBytes * state.progress) / 100)} / {formatBytes(state.fileSizeBytes)}
+            </span>
+            <span className="tabular-nums">{Math.round(state.progress)}%</span>
+          </div>
+        </div>
+        <Button variant="outline" size="sm" className="mt-6" onClick={cancel}>
+          Cancel
+        </Button>
+      </StateCard>
+    );
+  }
+
+  if (state.stage === "complete") {
+    const { result } = state;
+    return (
+      <StateCard>
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/15 text-primary">
           <CircleCheck className="h-7 w-7" />
         </div>
@@ -147,14 +99,37 @@ export function HomeUploadHero() {
         <p className="mt-1 text-sm text-muted-foreground">Your file is ready to share.</p>
 
         <div className="mx-auto mt-6 flex max-w-md items-center gap-2 rounded-xl border border-border bg-background/60 p-2 pl-4">
-          <code className="flex-1 truncate text-left text-sm text-muted-foreground">{displayUrl}</code>
-          <Button size="sm" onClick={handleCopy} className="shrink-0 gap-1.5 bg-gradient-brand text-white hover:opacity-90">
+          <code className="flex-1 truncate text-left text-sm text-muted-foreground">{result.displayUrl}</code>
+          <Button
+            size="sm"
+            onClick={() => handleCopy(result.displayUrl)}
+            className="shrink-0 gap-1.5 bg-gradient-brand text-white hover:opacity-90"
+          >
             {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
             {copied ? "Copied" : "Copy link"}
           </Button>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+        <div className="mx-auto mt-4 grid max-w-md grid-cols-2 gap-x-4 gap-y-1.5 text-left text-xs text-muted-foreground sm:grid-cols-4">
+          <div>
+            <p className="text-muted-foreground/60">File name</p>
+            <p className="truncate text-foreground">{result.fileName}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground/60">File size</p>
+            <p className="text-foreground">{formatBytes(result.fileSizeBytes)}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground/60">Expiration</p>
+            <p className="text-foreground">{result.expiresLabel}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground/60">Visibility</p>
+            <p className="text-foreground">{result.visibility}</p>
+          </div>
+        </div>
+
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
           <Dialog open={qrOpen} onOpenChange={setQrOpen}>
             <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setQrOpen(true)}>
               <QrCode className="h-3.5 w-3.5" />
@@ -166,21 +141,25 @@ export function HomeUploadHero() {
                 <DialogDescription>Open this file&apos;s link on another device.</DialogDescription>
               </DialogHeader>
               <div className="flex items-center justify-center py-2">
-                {qrDataUrl ? (
+                {result.qrDataUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={qrDataUrl} alt={`QR code for ${displayUrl}`} className="h-56 w-56 rounded-lg bg-white p-2" />
+                  <img
+                    src={result.qrDataUrl}
+                    alt={`QR code for ${result.displayUrl}`}
+                    className="h-56 w-56 rounded-lg bg-white p-2"
+                  />
                 ) : (
                   <div className="flex h-56 w-56 items-center justify-center rounded-lg bg-muted text-xs text-muted-foreground">
                     Generating…
                   </div>
                 )}
               </div>
-              <p className="truncate text-xs text-muted-foreground">{displayUrl}</p>
+              <p className="truncate text-xs text-muted-foreground">{result.displayUrl}</p>
             </DialogContent>
           </Dialog>
 
           <Button
-            render={<Link href={hrefUrl} target="_blank" />}
+            render={<Link href={result.hrefUrl} target="_blank" />}
             nativeButton={false}
             variant="outline"
             size="sm"
@@ -195,9 +174,102 @@ export function HomeUploadHero() {
             Upload another file
           </Button>
         </div>
-      </div>
+      </StateCard>
     );
   }
+
+  if (state.stage === "guest-limit-exceeded") {
+    const isReactive = state.attemptedFileSizeBytes !== undefined;
+    return (
+      <StateCard>
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-warning/15 text-warning">
+          <TriangleAlert className="h-7 w-7" />
+        </div>
+        <p className="mt-4 text-xl font-semibold tracking-tight">
+          {isReactive ? "You’ve reached the guest upload limit." : "Guest upload limit reached"}
+        </p>
+        <p className="mx-auto mt-1.5 max-w-sm text-sm text-muted-foreground">
+          {isReactive
+            ? "Create a free account to upload larger files and manage your uploads."
+            : "Sign in or create an account to continue uploading."}
+        </p>
+        {state.attemptedFileSizeBytes !== undefined && (
+          <p className="mt-3 text-xs text-muted-foreground/70">
+            Remaining guest capacity: {formatBytes(state.eligibility.guestRemainingBytes)} · Selected file:{" "}
+            {formatBytes(state.attemptedFileSizeBytes)}
+          </p>
+        )}
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+          <Button
+            render={<Link href="/signup" />}
+            nativeButton={false}
+            size="sm"
+            className="gap-1.5 bg-gradient-brand text-white hover:opacity-90"
+          >
+            <UserPlus className="h-3.5 w-3.5" />
+            Create account
+          </Button>
+          <Button render={<Link href="/login" />} nativeButton={false} variant="outline" size="sm" className="gap-1.5">
+            <LogIn className="h-3.5 w-3.5" />
+            Log in
+          </Button>
+          {isReactive && (
+            <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={cancel}>
+              Cancel
+            </Button>
+          )}
+        </div>
+      </StateCard>
+    );
+  }
+
+  if (state.stage === "email-verification-required") {
+    return (
+      <StateCard>
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-warning/15 text-warning">
+          <MailWarning className="h-7 w-7" />
+        </div>
+        <p className="mt-4 text-xl font-semibold tracking-tight">Verify your email to continue</p>
+        <p className="mx-auto mt-1.5 max-w-sm text-sm text-muted-foreground">
+          Please verify your email to continue uploading.
+        </p>
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+          <Button
+            size="sm"
+            className="bg-gradient-brand text-white hover:opacity-90"
+            onClick={() => toast.success("Verification email sent")}
+          >
+            Resend verification email
+          </Button>
+          <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={cancel}>
+            Cancel
+          </Button>
+        </div>
+      </StateCard>
+    );
+  }
+
+  if (state.stage === "error") {
+    return (
+      <StateCard>
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-destructive/15 text-destructive">
+          <TriangleAlert className="h-7 w-7" />
+        </div>
+        <p className="mt-4 text-xl font-semibold tracking-tight">Upload failed</p>
+        <p className="mx-auto mt-1.5 max-w-sm text-sm text-muted-foreground">{state.message}</p>
+        <Button variant="outline" size="sm" className="mt-6" onClick={reset}>
+          Try again
+        </Button>
+      </StateCard>
+    );
+  }
+
+  // stage === "ready"
+  const { eligibility } = state;
+  const guestNote =
+    eligibility.userType === "guest"
+      ? `Guest uploads available up to ${formatBytes(GUEST_UPLOAD_LIMIT_BYTES)} per IP — ${formatBytes(eligibility.guestRemainingBytes)} remaining. Sign in to manage files and upload more.`
+      : null;
 
   return (
     <div className="w-full">
@@ -213,7 +285,7 @@ export function HomeUploadHero() {
           e.preventDefault();
           setDragging(false);
           const file = e.dataTransfer.files[0];
-          if (file) startUpload(file);
+          if (file) selectFile(file);
         }}
         className={cn(
           "group relative flex w-full flex-col items-center justify-center gap-5 overflow-hidden rounded-3xl border-2 border-dashed border-border bg-card/60 px-6 py-16 text-center transition-colors sm:py-20",
@@ -226,7 +298,7 @@ export function HomeUploadHero() {
         </div>
         <div className="relative">
           <p className="text-2xl font-semibold tracking-tight sm:text-3xl">Drag &amp; Drop or Click to Upload</p>
-          <p className="mt-2 text-sm text-muted-foreground">Upload your file, get a shareable link, and send it anywhere.</p>
+          <p className="mt-2 text-sm text-muted-foreground">Drop a file below, get a link, and share it right away.</p>
         </div>
         <input
           ref={inputRef}
@@ -235,21 +307,13 @@ export function HomeUploadHero() {
           className="hidden"
           onChange={(e) => {
             const file = e.target.files?.[0];
-            if (file) startUpload(file);
+            if (file) selectFile(file);
           }}
         />
       </button>
 
       <div className="relative mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground/70">
-        <span>Max file size: 2GB</span>
-        <span aria-hidden className="text-muted-foreground/40">
-          ·
-        </span>
-        <span>No signup required</span>
-        <span aria-hidden className="text-muted-foreground/40">
-          ·
-        </span>
-        <span>Share instantly</span>
+        <span>{guestNote ?? "Share instantly"}</span>
         <span aria-hidden className="text-muted-foreground/40">
           ·
         </span>
@@ -266,16 +330,3 @@ export function HomeUploadHero() {
     </div>
   );
 }
-
-// --- What a real backend needs to replace here -------------------------
-// 1. startUpload: instead of a setInterval mock, request a presigned S3
-//    PUT URL (e.g. POST /api/uploads/presigned-url), upload the file
-//    directly to S3 tracking real progress (XHR/fetch upload events), then
-//    notify the backend the upload finished so it can create the Video
-//    record (storagePath, fileSize, mimeType) and kick off thumbnail
-//    generation (Lambda/FFmpeg per the design doc).
-// 2. The "upload finished" effect: replace the random `videos[...]` pick
-//    with the real created Video's shareToken from that API response.
-// 3. Anonymous uploads: decide/confirm with backend whether these are
-//    tied to a session-less "guest owner" record or fully anonymous —
-//    affects whether My Files can ever show files uploaded this way.
