@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import Link from "next/link";
-import { AppShell } from "@/components/app-shell";
+import { PublicLayout } from "@/components/public-layout";
 import { RequireUser } from "@/components/require-user";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -168,7 +168,7 @@ export default function UploadPage() {
 
   if (published) {
     return (
-      <AppShell>
+      <PublicLayout>
         <RequireUser>
           <div className="mx-auto flex max-w-xl flex-col items-center px-6 py-20 text-center">
             <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/15 text-primary">
@@ -187,12 +187,12 @@ export default function UploadPage() {
             </Button>
           </div>
         </RequireUser>
-      </AppShell>
+      </PublicLayout>
     );
   }
 
   return (
-    <AppShell>
+    <PublicLayout>
       <RequireUser>
         <div className="mx-auto max-w-7xl px-6 py-10 md:px-10">
           <div className="mb-8 flex items-center justify-between">
@@ -462,6 +462,6 @@ export default function UploadPage() {
           </div>
         </div>
       </RequireUser>
-    </AppShell>
+    </PublicLayout>
   );
 }

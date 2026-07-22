@@ -1,11 +1,9 @@
 import Link from "next/link";
-import { Zap, Link2, Clock3, Compass } from "lucide-react";
-import { Logo } from "@/components/logo";
-import { AccountMenu } from "@/components/account-menu";
+import { Zap, Link2, Clock3 } from "lucide-react";
+import { PublicLayout } from "@/components/public-layout";
 import { HomeUploadHero } from "@/components/home-upload-hero";
 import { VideoCard } from "@/components/video-card";
 import { Button } from "@/components/ui/button";
-import { SiteFooter } from "@/components/site-footer";
 import { videos } from "@/lib/mock-data";
 
 const features = [
@@ -35,24 +33,7 @@ const popularVideos = [...videos]
 
 export default function HomePage() {
   return (
-    <div className="flex min-h-screen flex-col bg-ocean">
-      <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur-xl md:px-6">
-        <Link href="/" className="flex shrink-0">
-          <Logo />
-        </Link>
-        <div className="flex items-center gap-4">
-          <Link
-            href="/discover"
-            className="hidden items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground sm:flex"
-          >
-            <Compass className="h-4 w-4" />
-            Discover
-          </Link>
-          <AccountMenu />
-        </div>
-      </header>
-
-      <main className="flex-1">
+    <PublicLayout>
         <section className="mx-auto flex max-w-3xl flex-col items-center px-6 py-16 text-center md:py-24">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
             Upload. Share. Discover.
@@ -103,9 +84,6 @@ export default function HomePage() {
             ))}
           </div>
         </section>
-      </main>
-
-      <SiteFooter />
-    </div>
+    </PublicLayout>
   );
 }

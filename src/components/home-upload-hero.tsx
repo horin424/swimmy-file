@@ -185,13 +185,9 @@ export function HomeUploadHero() {
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-warning/15 text-warning">
           <TriangleAlert className="h-7 w-7" />
         </div>
-        <p className="mt-4 text-xl font-semibold tracking-tight">
-          {isReactive ? "You’ve reached the guest upload limit." : "Guest upload limit reached"}
-        </p>
+        <p className="mt-4 text-xl font-semibold tracking-tight">Guest upload limit reached</p>
         <p className="mx-auto mt-1.5 max-w-sm text-sm text-muted-foreground">
-          {isReactive
-            ? "Create a free account to upload larger files and manage your uploads."
-            : "Sign in or create an account to continue uploading."}
+          Create a free account to continue uploading and manage your files.
         </p>
         {state.attemptedFileSizeBytes !== undefined && (
           <p className="mt-3 text-xs text-muted-foreground/70">
@@ -268,7 +264,7 @@ export function HomeUploadHero() {
   const { eligibility } = state;
   const guestNote =
     eligibility.userType === "guest"
-      ? `Guest uploads available up to ${formatBytes(GUEST_UPLOAD_LIMIT_BYTES)} per IP — ${formatBytes(eligibility.guestRemainingBytes)} remaining. Sign in to manage files and upload more.`
+      ? `Guest uploads are available up to ${formatBytes(GUEST_UPLOAD_LIMIT_BYTES)} per IP (${formatBytes(eligibility.guestRemainingBytes)} remaining). Sign in to upload more and manage your files.`
       : null;
 
   return (

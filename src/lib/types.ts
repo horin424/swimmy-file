@@ -33,6 +33,7 @@ export interface Video {
   durationSeconds: number;
   fileSizeMb: number;
   views: number;
+  downloadCount: number;
   reportCount: number;
   category: string;
   tags: string[];

@@ -75,6 +75,9 @@ function makeVideo(i: number, overrides: Partial<Video> = {}): Video {
     // MB, capped well under the 2GB per-file limit for new accounts.
     fileSizeMb: Math.round(40 + seededRandom(i + 3.1) * 900),
     views,
+    // Downloads are always a fraction of views (not everyone who watches a
+    // preview downloads the file) — deterministic like the other mock stats.
+    downloadCount: Math.round(views * (0.05 + seededRandom(i + 5.4) * 0.1)),
     reportCount: 0,
     category: genreCategories[i % genreCategories.length].slug,
     tags: [trendingTags[i % trendingTags.length].slug, trendingTags[(i + 2) % trendingTags.length].slug],
