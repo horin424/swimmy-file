@@ -85,9 +85,12 @@ function DiscoverDetailsSection({
 
   if (!open) {
     return (
-      <div className="mt-5 flex flex-col items-center gap-1.5">
+      <div className="mx-auto mt-5 max-w-md rounded-xl border border-border/60 bg-background/30 p-4 text-center">
         <p className="text-sm text-muted-foreground">Want this file to appear in Discover?</p>
-        <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground" onClick={() => setOpen(true)}>
+        <p className="mt-1 text-xs text-muted-foreground/70">
+          Add title, category, and tags before publishing publicly.
+        </p>
+        <Button variant="outline" size="sm" className="mt-3 gap-1.5" onClick={() => setOpen(true)}>
           <Sparkles className="h-3.5 w-3.5" />
           Add details for Discover
         </Button>
@@ -260,8 +263,10 @@ export function HomeUploadHero() {
           {/* Full-width row of its own — a 4-up grid truncated this down to
               a handful of characters (e.g. "Guitar cover ses..."), which
               read as broken rather than just compact. Two-line clamp plus a
-              title tooltip covers names too long to show in full. */}
-          <div className="rounded-xl border border-border bg-background/40 px-4 py-3">
+              title tooltip covers names too long to show in full. Border
+              kept soft/flat (vs. the URL field's stronger border above) so
+              the two don't visually compete. */}
+          <div className="rounded-xl border border-border/40 bg-background/20 px-4 py-3">
             <p className="text-xs font-medium text-muted-foreground/70">File name</p>
             <p
               className="mt-0.5 line-clamp-2 break-words text-sm font-semibold text-foreground"
@@ -285,9 +290,31 @@ export function HomeUploadHero() {
               <p className="mt-0.5 text-sm font-semibold text-foreground">{result.visibility}</p>
             </div>
           </div>
+
+          <p className="mt-2 text-xs text-muted-foreground/70">
+            {result.visibility === "Public"
+              ? "Anyone can find this file on Discover."
+              : "Only people with this link can access this file."}
+          </p>
         </div>
 
+        {/* Open link leads (not Copy link, already handled above it) since
+            checking the shared page is the next most common action after
+            copying — outlined in primary so it reads a step above the
+            plain-outline buttons next to it without competing with the
+            gradient Copy link button. */}
         <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+          <Button
+            render={<Link href={result.hrefUrl} target="_blank" />}
+            nativeButton={false}
+            variant="outline"
+            size="sm"
+            className="gap-1.5 border-primary/40 text-primary hover:bg-primary/5"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            Open link
+          </Button>
+
           <Dialog open={qrOpen} onOpenChange={setQrOpen}>
             <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setQrOpen(true)}>
               <QrCode className="h-3.5 w-3.5" />
@@ -316,29 +343,35 @@ export function HomeUploadHero() {
             </DialogContent>
           </Dialog>
 
-          <Button
-            render={<Link href={result.hrefUrl} target="_blank" />}
-            nativeButton={false}
-            variant="outline"
-            size="sm"
-            className="gap-1.5"
-          >
-            <ExternalLink className="h-3.5 w-3.5" />
-            Open link
-          </Button>
-
           <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground" onClick={reset}>
             <RotateCw className="h-3.5 w-3.5" />
             Upload another file
           </Button>
         </div>
 
-        {/* Mode 2 (Publish to Discover) — guests never get this, matching
-            "hide Publish to Discover for guests" in the product direction;
-            they already got their Quick Share link above, which is the
-            whole point of the guest flow. */}
+        {/* Mode 2 (Publish to Discover). Guests get a scaled-down variant
+            that sells the account instead of the form — they can't actually
+            publish without one, so showing the full title/category/tags
+            form to a guest would just dead-end at a gate later. */}
         {status === "authenticated" && (
           <DiscoverDetailsSection result={result} onPublish={publishToDiscover} />
+        )}
+        {status === "guest" && (
+          <div className="mx-auto mt-5 max-w-md rounded-xl border border-border/60 bg-background/30 p-4 text-center">
+            <p className="text-sm text-muted-foreground">Want to publish this file to Discover?</p>
+            <p className="mt-1 text-xs text-muted-foreground/70">
+              Create an account to publish and manage public uploads.
+            </p>
+            <Button
+              render={<Link href="/signup" />}
+              nativeButton={false}
+              size="sm"
+              className="mt-3 gap-1.5 bg-gradient-brand text-white hover:opacity-90"
+            >
+              <UserPlus className="h-3.5 w-3.5" />
+              Create account
+            </Button>
+          </div>
         )}
       </StateCard>
     );
