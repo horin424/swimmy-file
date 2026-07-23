@@ -42,8 +42,9 @@ const exploreItems: NavItem[] = [
 ];
 
 // Its own section, not Explore — uploading is a creation/action, not
-// browsing. Guests never see it (same as the header's own Upload button
-// being hidden for them); only rendered for authenticated sessions, below.
+// browsing. Shown for guests too (they can upload up to 1GB/IP before
+// needing an account — see lib/upload-eligibility.ts), same as the
+// header's own Upload button.
 const createItems: NavItem[] = [{ href: "/", label: "Upload", icon: Upload }];
 
 const guestAccountItems: NavItem[] = [
@@ -122,7 +123,7 @@ export function SidebarNav() {
     <>
       <NavSection title="Explore" items={exploreItems} pathname={pathname} />
 
-      {status === "authenticated" && user && <NavSection title="Create" items={createItems} pathname={pathname} />}
+      <NavSection title="Create" items={createItems} pathname={pathname} />
 
       {/* Tags are quick filter shortcuts, not pages — kept as their own
           section (not nested under Explore) but placed right after

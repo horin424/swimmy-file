@@ -5,13 +5,13 @@ import { Upload as UploadIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/lib/session";
 
-// Uploading requires an account — guests don't get a header CTA for an
-// action they can't take; they already have Log in/Sign up in the account
-// menu slot instead. Not rendered at all during "loading" either, so the
-// button never flashes in for a guest right before session resolves.
+// Guests can upload too (up to 1GB cumulative per IP — see
+// lib/upload-eligibility.ts), so this shows for guest and authenticated
+// sessions alike; only hidden during "loading" so it doesn't flash in
+// before the session resolves.
 export function UploadButton() {
   const { status } = useSession();
-  if (status !== "authenticated") return null;
+  if (status === "loading") return null;
 
   return (
     <Button
