@@ -85,10 +85,13 @@ function DiscoverDetailsSection({
 
   if (!open) {
     return (
-      <Button variant="ghost" size="sm" className="mt-5 gap-1.5 text-muted-foreground" onClick={() => setOpen(true)}>
-        <Sparkles className="h-3.5 w-3.5" />
-        Add details for Discover
-      </Button>
+      <div className="mt-5 flex flex-col items-center gap-1.5">
+        <p className="text-sm text-muted-foreground">Want this file to appear in Discover?</p>
+        <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground" onClick={() => setOpen(true)}>
+          <Sparkles className="h-3.5 w-3.5" />
+          Add details for Discover
+        </Button>
+      </div>
     );
   }
 
@@ -253,22 +256,34 @@ export function HomeUploadHero() {
           </Button>
         </div>
 
-        <div className="mx-auto mt-4 grid max-w-md grid-cols-2 gap-x-4 gap-y-1.5 text-left text-xs text-muted-foreground sm:grid-cols-4">
-          <div>
-            <p className="text-muted-foreground/60">File name</p>
-            <p className="truncate text-foreground">{result.displayTitle}</p>
+        <div className="mx-auto mt-5 max-w-md text-left">
+          {/* Full-width row of its own — a 4-up grid truncated this down to
+              a handful of characters (e.g. "Guitar cover ses..."), which
+              read as broken rather than just compact. Two-line clamp plus a
+              title tooltip covers names too long to show in full. */}
+          <div className="rounded-xl border border-border bg-background/40 px-4 py-3">
+            <p className="text-xs font-medium text-muted-foreground/70">File name</p>
+            <p
+              className="mt-0.5 line-clamp-2 break-words text-sm font-semibold text-foreground"
+              title={result.displayTitle}
+            >
+              {result.displayTitle}
+            </p>
           </div>
-          <div>
-            <p className="text-muted-foreground/60">File size</p>
-            <p className="text-foreground">{formatBytes(result.fileSizeBytes)}</p>
-          </div>
-          <div>
-            <p className="text-muted-foreground/60">Expiration</p>
-            <p className="text-foreground">{result.expiresLabel}</p>
-          </div>
-          <div>
-            <p className="text-muted-foreground/60">Visibility</p>
-            <p className="text-foreground">{result.visibility}</p>
+
+          <div className="mt-3 grid grid-cols-3 gap-3">
+            <div>
+              <p className="text-xs font-medium text-muted-foreground/70">File size</p>
+              <p className="mt-0.5 text-sm font-semibold text-foreground">{formatBytes(result.fileSizeBytes)}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-muted-foreground/70">Expiration</p>
+              <p className="mt-0.5 text-sm font-semibold text-foreground">{result.expiresLabel}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-muted-foreground/70">Visibility</p>
+              <p className="mt-0.5 text-sm font-semibold text-foreground">{result.visibility}</p>
+            </div>
           </div>
         </div>
 
