@@ -14,9 +14,20 @@ import {
   MailWarning,
   LogIn,
   UserPlus,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -26,8 +37,12 @@ import {
 } from "@/components/ui/dialog";
 import { cn, formatBytes } from "@/lib/utils";
 import { GUEST_UPLOAD_LIMIT_BYTES } from "@/lib/upload-eligibility";
-import { useUploadFlow } from "@/lib/use-upload-flow";
+import { useUploadFlow, type CompletedUpload, type DiscoverDetails } from "@/lib/use-upload-flow";
+import { useSession } from "@/lib/session";
+import { categories } from "@/lib/mock-data";
 import { toast } from "sonner";
+
+const discoverCategories = categories.filter((c) => c.slug !== "all" && c.slug !== "popular" && c.slug !== "new");
 
 // Shared card shell every non-dropzone stage below renders into, so they
 // all read as one consistent "state screen" rather than differently-shaped
@@ -40,12 +55,138 @@ function StateCard({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Mode 2 (Publish to Discover) — optional, collapsed by default, and never
+// blocks copying the share link above it (Mode 1/Quick Share already
+// finished by the time this renders). Guests never see this at all; see
+// the "Add details for Discover" call site in HomeUploadHero.
+function DiscoverDetailsSection({
+  result,
+  onPublish,
+}: {
+  result: CompletedUpload;
+  onPublish: (details: DiscoverDetails) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState(result.displayTitle);
+  const [category, setCategory] = useState("");
+  const [description, setDescription] = useState("");
+  const [tagsInput, setTagsInput] = useState("");
+  const canPublish = title.trim().length > 0 && category.length > 0;
+
+  if (result.discoverEnabled) {
+    return (
+      <p className="mt-5 flex items-center justify-center gap-1.5 text-xs font-medium text-primary">
+        <CircleCheck className="h-3.5 w-3.5" />
+        Published to Discover
+      </p>
+    );
+  }
+
+  if (!open) {
+    return (
+      <Button variant="ghost" size="sm" className="mt-5 gap-1.5 text-muted-foreground" onClick={() => setOpen(true)}>
+        <Sparkles className="h-3.5 w-3.5" />
+        Add details for Discover
+      </Button>
+    );
+  }
+
+  return (
+    <div className="mx-auto mt-5 max-w-md rounded-xl border border-border bg-background/40 p-4 text-left">
+      <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Publish to Discover</p>
+      <div className="flex flex-col gap-3">
+        <div>
+          <Label htmlFor="discover-title" className="mb-1.5 text-xs text-muted-foreground">
+            Title <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="discover-title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Give this file a title"
+          />
+        </div>
+        <div>
+          <Label className="mb-1.5 text-xs text-muted-foreground">
+            Category <span className="text-destructive">*</span>
+          </Label>
+          <Select
+            value={category}
+            onValueChange={(v) => setCategory(v ?? "")}
+            items={Object.fromEntries(discoverCategories.map((c) => [c.slug, c.name]))}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select a category" />
+            </SelectTrigger>
+            <SelectContent>
+              {discoverCategories.map((c) => (
+                <SelectItem key={c.slug} value={c.slug}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor="discover-description" className="mb-1.5 text-xs text-muted-foreground">
+            Description
+          </Label>
+          <Textarea
+            id="discover-description"
+            rows={3}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="What's this file about? (optional)"
+          />
+        </div>
+        <div>
+          <Label htmlFor="discover-tags" className="mb-1.5 text-xs text-muted-foreground">
+            Tags
+          </Label>
+          <Input
+            id="discover-tags"
+            value={tagsInput}
+            onChange={(e) => setTagsInput(e.target.value)}
+            placeholder="gaming, tutorial, funny"
+          />
+          <p className="mt-1 text-xs text-muted-foreground/70">Comma-separated</p>
+        </div>
+      </div>
+      <div className="mt-4 flex items-center justify-end gap-2">
+        <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setOpen(false)}>
+          Cancel
+        </Button>
+        <Button
+          size="sm"
+          disabled={!canPublish}
+          className="gap-1.5 bg-gradient-brand text-white hover:opacity-90"
+          onClick={() => {
+            onPublish({
+              title: title.trim(),
+              category,
+              description: description.trim() || undefined,
+              tags: tagsInput
+                .split(",")
+                .map((t) => t.trim())
+                .filter(Boolean),
+            });
+            toast.success("Published to Discover");
+          }}
+        >
+          Publish to Discover
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function HomeUploadHero() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [copied, setCopied] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
-  const { state, selectFile, cancel, reset } = useUploadFlow();
+  const { state, selectFile, cancel, reset, publishToDiscover } = useUploadFlow();
+  const { status } = useSession();
 
   const handleCopy = async (displayUrl: string) => {
     try {
@@ -113,7 +254,7 @@ export function HomeUploadHero() {
         <div className="mx-auto mt-4 grid max-w-md grid-cols-2 gap-x-4 gap-y-1.5 text-left text-xs text-muted-foreground sm:grid-cols-4">
           <div>
             <p className="text-muted-foreground/60">File name</p>
-            <p className="truncate text-foreground">{result.fileName}</p>
+            <p className="truncate text-foreground">{result.displayTitle}</p>
           </div>
           <div>
             <p className="text-muted-foreground/60">File size</p>
@@ -174,12 +315,19 @@ export function HomeUploadHero() {
             Upload another file
           </Button>
         </div>
+
+        {/* Mode 2 (Publish to Discover) — guests never get this, matching
+            "hide Publish to Discover for guests" in the product direction;
+            they already got their Quick Share link above, which is the
+            whole point of the guest flow. */}
+        {status === "authenticated" && (
+          <DiscoverDetailsSection result={result} onPublish={publishToDiscover} />
+        )}
       </StateCard>
     );
   }
 
   if (state.stage === "guest-limit-exceeded") {
-    const isReactive = state.attemptedFileSizeBytes !== undefined;
     return (
       <StateCard>
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-warning/15 text-warning">
@@ -209,11 +357,9 @@ export function HomeUploadHero() {
             <LogIn className="h-3.5 w-3.5" />
             Log in
           </Button>
-          {isReactive && (
-            <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={cancel}>
-              Cancel
-            </Button>
-          )}
+          <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={cancel}>
+            Cancel
+          </Button>
         </div>
       </StateCard>
     );

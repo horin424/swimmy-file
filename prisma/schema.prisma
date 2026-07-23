@@ -29,6 +29,13 @@ enum UserStatus {
 enum Visibility {
   PUBLIC
   PRIVATE
+  // Quick Share default (see upload-eligibility.ts / use-upload-flow.ts on
+  // the frontend): reachable only via its share link, not shown to the
+  // uploader's own account as a manageable "private" file the way PRIVATE
+  // is. Distinct from PRIVATE so a future "make this private instead of
+  // link-only" account-management action isn't ambiguous with the
+  // system-assigned Quick Share default.
+  LINK_ONLY
 }
 
 enum VideoStatus {
@@ -130,6 +137,11 @@ model Video {
   // enforces the cumulative cap. Never store the raw IP (see
   // GuestUploadUsage's own note and .env.example's IP_HASH_SALT).
   ipHash       String?
+  // Quick Share (the default upload mode — see use-upload-flow.ts on the
+  // frontend) sets this to originalFileName at creation time; there's no
+  // DB-level default since Postgres can't copy another column's value
+  // without a trigger. Only changes when Publish to Discover ("Add details
+  // for Discover") sets a real title.
   title            String
   description      String?
   storagePath      String
@@ -141,7 +153,10 @@ model Video {
   // Seconds. Nullable — unknown until post-upload processing determines it.
   duration         Int?
   thumbnailPath    String?
-  visibility       Visibility  @default(PUBLIC)
+  // LINK_ONLY, not PUBLIC: Quick Share (the default for every upload,
+  // guest or logged-in) never makes a file public on its own — only
+  // Publish to Discover does, by explicitly setting this to PUBLIC.
+  visibility       Visibility  @default(LINK_ONLY)
   status           VideoStatus @default(UPLOADING)
   shareToken       String      @unique
   viewCount        Int         @default(0)

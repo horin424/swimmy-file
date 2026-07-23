@@ -9,15 +9,34 @@ import type { UploadEligibility } from "./types";
 
 const MAX_FILE_SIZE_BYTES = 2 * 1024 ** 3; // per-file cap, independent of the guest cumulative cap
 
+// Mirrors the suggested file metadata shape (id/shareToken/originalFileName/
+// displayTitle/.../visibility LINK_ONLY|PUBLIC|PRIVATE/discoverEnabled/...)
+// closely enough that the mock->real swap only touches where these values
+// come from, not their shape. Quick Share sets displayTitle=originalFileName,
+// visibility=LINK_ONLY, discoverEnabled=false; publishToDiscover() below is
+// the only thing that ever changes them client-side.
 export interface CompletedUpload {
-  fileName: string;
+  fileName: string; // original file name — immutable
+  displayTitle: string; // editable via "Add details for Discover"; defaults to fileName
   fileSizeBytes: number;
   shareToken: string;
   displayUrl: string;
   hrefUrl: string;
   qrDataUrl: string | null;
-  visibility: "Private (link only)" | "Public";
+  visibility: "Link only" | "Public";
+  discoverEnabled: boolean;
   expiresLabel: string;
+  category?: string;
+  description?: string;
+  tags?: string[];
+}
+
+export interface DiscoverDetails {
+  title: string;
+  category: string;
+  description?: string;
+  tags?: string[];
+  expiresLabel?: string;
 }
 
 export type UploadFlowState =
@@ -121,14 +140,18 @@ export function useUploadFlow() {
         const shareToken = demo.shareToken;
         const result: CompletedUpload = {
           fileName: file.name,
+          // Quick Share default: displayTitle = originalFileName. Only
+          // "Add details for Discover" (publishToDiscover, below) changes it.
+          displayTitle: file.name,
           fileSizeBytes: file.size,
           shareToken,
           displayUrl: `swimmyfile.io/d/${shareToken}`,
           hrefUrl: `/d/${shareToken}`,
           qrDataUrl: null,
-          // Anonymous/guest-style uploads default to link-only, not public —
-          // nobody explicitly chose to publish it to Discover.
-          visibility: "Private (link only)",
+          // Quick Share default — nobody explicitly chose to publish it to
+          // Discover, so it stays link-only/unlisted.
+          visibility: "Link only",
+          discoverEnabled: false,
           expiresLabel: "Expires in 7 days",
         };
         setOverride({ stage: "complete", result });
@@ -149,5 +172,29 @@ export function useUploadFlow() {
     [state, recordUpload],
   );
 
-  return { state, selectFile, cancel, reset };
+  // "Add details for Discover" — Mode 2 (Publish to Discover) per the
+  // Quick Share / Publish to Discover split. Only meaningful once a Quick
+  // Share upload has completed; a no-op otherwise. Mock stand-in for a real
+  // PATCH /api/videos/:id/publish — same reasoning as finishUpload above.
+  const publishToDiscover = useCallback((details: DiscoverDetails) => {
+    setOverride((prev) =>
+      prev?.stage === "complete"
+        ? {
+            stage: "complete",
+            result: {
+              ...prev.result,
+              displayTitle: details.title,
+              category: details.category,
+              description: details.description,
+              tags: details.tags,
+              visibility: "Public",
+              discoverEnabled: true,
+              ...(details.expiresLabel ? { expiresLabel: details.expiresLabel } : null),
+            },
+          }
+        : prev,
+    );
+  }, []);
+
+  return { state, selectFile, cancel, reset, publishToDiscover };
 }
