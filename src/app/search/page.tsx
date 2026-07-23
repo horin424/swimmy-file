@@ -109,7 +109,7 @@ function SearchResults() {
               Showing results for <span className="text-foreground">&ldquo;{queryDraft.trim()}&rdquo;</span>
             </>
           ) : (
-            "Find videos by title, tag, or category."
+            "Find public uploads by title, tag, category, or uploader."
           )}
         </p>
       </div>
@@ -127,8 +127,8 @@ function SearchResults() {
           value={queryDraft}
           onChange={(e) => setQueryDraft(e.target.value)}
           onBlur={syncQueryToUrl}
-          placeholder="Search videos, tags, or uploaders..."
-          aria-label="Search videos, tags, or uploaders"
+          placeholder="Search public uploads, tags, or uploaders..."
+          aria-label="Search public uploads, tags, or uploaders"
           autoComplete="off"
           className="h-10 rounded-full border-border bg-accent pl-9 pr-9 focus-visible:border-primary/50"
         />
@@ -224,7 +224,9 @@ function SearchResults() {
         <div>
           <div className="mb-4 flex items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-1.5">
-              <p className="text-sm text-muted-foreground">{results.length} results</p>
+              <p className="text-sm text-muted-foreground">
+                {results.length} public {results.length === 1 ? "upload" : "uploads"}
+              </p>
               {tags.map((t) => (
                 <Badge key={t} variant="secondary" className="gap-1 pr-1.5">
                   #{t}
@@ -257,7 +259,7 @@ function SearchResults() {
 
           {results.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border py-20 text-center">
-              <p className="text-sm font-medium text-foreground">No videos found.</p>
+              <p className="text-sm font-medium text-foreground">No public uploads found.</p>
               <p className="mt-1 text-sm text-muted-foreground">Try another keyword or category.</p>
             </div>
           ) : (

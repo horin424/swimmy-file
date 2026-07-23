@@ -86,7 +86,7 @@ export function DevSessionSwitcher() {
         onClick={() => setOpen((v) => !v)}
         className="rounded-full border border-border bg-popover px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground shadow-lg transition-colors hover:text-foreground"
       >
-        Dev: {activeLabel}
+        Preview: {activeLabel}
       </button>
     </div>
   );

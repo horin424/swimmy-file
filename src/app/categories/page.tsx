@@ -51,7 +51,7 @@ export default function CategoriesPage() {
                     <p className="mt-0.5 truncate text-xs text-muted-foreground">{category.description}</p>
                   )}
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {count === 0 ? "No videos yet" : `${formatCount(count)} videos`}
+                    {count === 0 ? "No public uploads yet" : `${formatCount(count)} public uploads`}
                   </p>
                 </div>
                 <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />

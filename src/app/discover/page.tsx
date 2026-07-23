@@ -73,8 +73,7 @@ export default function DiscoverPage() {
               Discover <span className="text-primary">Swimmy File</span>
             </h1>
             <p className="mt-1.5 max-w-lg text-sm text-muted-foreground">
-              Upload a video, get a shareable link in seconds, and let public uploads surface here as
-              they&apos;re watched.
+              Upload a file, get a shareable link, and let public uploads appear here.
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-1 rounded-full border border-border bg-accent p-1 text-sm">
@@ -140,7 +139,7 @@ export default function DiscoverPage() {
         </div>
         {featured.length === 0 ? (
           <p className="rounded-xl border border-dashed border-border py-12 text-center text-sm text-muted-foreground">
-            No videos match these filters yet.
+            No public uploads match these filters yet.
           </p>
         ) : (
           // Capped narrower than the rest of the page at lg+ — at full content
@@ -157,7 +156,7 @@ export default function DiscoverPage() {
       {grid.length > 0 && (
         <section className="px-6 pb-16 md:px-10">
           <div className="mb-4">
-            <h2 className="text-lg font-semibold">More videos</h2>
+            <h2 className="text-lg font-semibold">More public uploads</h2>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             {visibleGrid.map((v) => (

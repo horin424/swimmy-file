@@ -10,14 +10,14 @@ const pseudoCategories: Category[] = [
 ];
 
 const genreCategories: Category[] = [
-  { slug: "music", name: "Music", count: 1800, description: "Covers, live sessions, and original tracks." },
-  { slug: "gaming", name: "Gaming", count: 2600, description: "Gameplay, clips, highlights, and streams." },
-  { slug: "movies", name: "Movies & Animation", count: 1400, description: "Short films, animation, and fan edits." },
-  { slug: "technology", name: "Technology", count: 1900, description: "Reviews, tutorials, and tech deep-dives." },
-  { slug: "education", name: "Education", count: 1300, description: "How-tos, explainers, and lessons." },
-  { slug: "lifestyle", name: "Lifestyle", count: 1700, description: "Vlogs, routines, and everyday moments." },
+  { slug: "music", name: "Music", count: 1800, description: "Music-related public uploads: covers, sessions, and tracks." },
+  { slug: "gaming", name: "Gaming", count: 2600, description: "Game-related public uploads and clips." },
+  { slug: "movies", name: "Movies & Animation", count: 1400, description: "Shared films, animation, and edits." },
+  { slug: "technology", name: "Technology", count: 1900, description: "Tech reviews, guides, and shared resources." },
+  { slug: "education", name: "Education", count: 1300, description: "Tutorials, explainers, and learning resources." },
+  { slug: "lifestyle", name: "Lifestyle", count: 1700, description: "Everyday uploads: routines, diaries, and moments." },
   { slug: "travel", name: "Travel", count: 1200, description: "Trip diaries and destination guides." },
-  { slug: "sports", name: "Sports", count: 1000, description: "Highlights, training, and match footage." },
+  { slug: "sports", name: "Sports", count: 1000, description: "Shared highlights, training, and match footage." },
   { slug: "other", name: "Other", count: 900, description: "Everything that doesn't fit elsewhere." },
 ];
 

@@ -135,17 +135,24 @@ export function useUploadFlow() {
         // Mock stand-in for the real POST /api/upload/complete response —
         // picks an existing demo video so the generated link leads
         // somewhere real instead of a 404, until there's a backend that
-        // actually creates a File/Video record.
+        // actually creates a File/Video record. displayTitle/fileSizeBytes
+        // intentionally come from that demo record, not the real selected
+        // `file` — otherwise the complete screen would show one file name/
+        // size while /d/[shareToken] (reading the demo's real mock data)
+        // shows another, which is exactly the "opened link shows a
+        // different file" inconsistency this is standing in to avoid.
         const demo = videos[Math.floor(Math.random() * Math.min(videos.length, 12))];
         const shareToken = demo.shareToken;
         const result: CompletedUpload = {
           fileName: file.name,
-          // Quick Share default: displayTitle = originalFileName. Only
-          // "Add details for Discover" (publishToDiscover, below) changes it.
-          displayTitle: file.name,
-          fileSizeBytes: file.size,
+          // Quick Share default: displayTitle = originalFileName. Here
+          // that's the demo's title (see comment above) — only "Add
+          // details for Discover" (publishToDiscover, below) changes it
+          // otherwise.
+          displayTitle: demo.title,
+          fileSizeBytes: demo.fileSizeMb * 1024 * 1024,
           shareToken,
-          displayUrl: `swimmyfile.io/d/${shareToken}`,
+          displayUrl: `https://swimmyfile.io/d/${shareToken}`,
           hrefUrl: `/d/${shareToken}`,
           qrDataUrl: null,
           // Quick Share default — nobody explicitly chose to publish it to

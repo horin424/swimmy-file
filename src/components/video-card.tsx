@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { Eye } from "lucide-react";
+import { Eye, Download } from "lucide-react";
 import { VideoThumb } from "./video-thumb";
 import { ReportButton } from "./report-button";
 import { CopyLinkButton } from "./copy-link-button";
 import { cn } from "@/lib/utils";
-import { formatCount, myVideoIds } from "@/lib/mock-data";
+import { formatCount, formatFileSize, myVideoIds } from "@/lib/mock-data";
 import type { Video } from "@/lib/types";
 
 export function VideoCard({
@@ -36,15 +36,21 @@ export function VideoCard({
           </div>
         </VideoThumb>
       </div>
-      <div className="flex shrink-0 flex-col gap-1.5 p-3">
+      <div className="flex shrink-0 flex-col gap-1 p-3">
         <p className={cn("line-clamp-2 font-medium text-foreground", featured ? "text-base" : "text-sm")}>
           {video.title}
         </p>
-        <div className="mt-auto flex items-center justify-between text-xs text-muted-foreground">
-          <span className="truncate">@{video.uploader.handle}</span>
-          <span className="flex shrink-0 items-center gap-1">
+        {/* File-sharing metadata (type/size, views/downloads) instead of an
+            uploader handle — a shared-file card, not a creator's video post. */}
+        <p className="text-xs text-muted-foreground">Video · {formatFileSize(video.fileSizeMb)}</p>
+        <div className="mt-auto flex items-center gap-3 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1">
             <Eye className="h-3.5 w-3.5" />
             {formatCount(video.views)}
+          </span>
+          <span className="flex items-center gap-1">
+            <Download className="h-3.5 w-3.5" />
+            {formatCount(video.downloadCount)}
           </span>
         </div>
       </div>

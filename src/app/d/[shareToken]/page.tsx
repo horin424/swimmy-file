@@ -27,10 +27,15 @@ export default async function SharedFilePage({
   const video = videos.find((v) => v.shareToken === shareToken);
   if (!video) notFound();
 
+  // CopyLinkButton prepends https:// itself, so it needs the bare domain —
+  // the visible text uses the full URL instead (see client feedback: the
+  // on-screen link should read as a real https:// URL, not a bare domain).
   const shareUrl = `swimmyfile.io/d/${video.shareToken}`;
+  const fullShareUrl = `https://${shareUrl}`;
   // You can't report your own upload — this is one of "my files".
   const isMine = myVideoIds.has(video.id);
-  const related = videos.filter((v) => v.id !== video.id && v.category === video.category).slice(0, 6);
+  const isPublic = video.visibility === "public";
+  const related = isPublic ? videos.filter((v) => v.id !== video.id && v.category === video.category).slice(0, 6) : [];
 
   return (
     <PublicLayout>
@@ -51,7 +56,21 @@ export default async function SharedFilePage({
               {video.title}
             </h1>
 
-            <dl className="mt-3 flex flex-col gap-1.5 text-sm text-muted-foreground">
+            {/* Download/Copy Link lead, right under the title — these are
+                what someone opening a shared link actually came for; the
+                metadata list and preview below are secondary context, not
+                a reason to keep watching. */}
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <DownloadButton fileName={video.title} />
+              <CopyLinkButton url={shareUrl} />
+              {!isMine && <ReportButton />}
+            </div>
+
+            <p className="mt-3 truncate rounded-lg bg-black/30 px-3 py-2 font-mono text-xs text-muted-foreground">
+              {fullShareUrl}
+            </p>
+
+            <dl className="mt-4 flex flex-col gap-1.5 text-sm text-muted-foreground">
               <div className="flex items-center justify-between">
                 <dt>File size</dt>
                 <dd className="text-foreground">{formatFileSize(video.fileSizeMb)}</dd>
@@ -78,21 +97,23 @@ export default async function SharedFilePage({
                 </dd>
               </div>
             </dl>
-
-            <p className="mt-4 truncate rounded-lg bg-black/30 px-3 py-2 font-mono text-xs text-muted-foreground">
-              {shareUrl}
-            </p>
-
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <DownloadButton fileName={video.title} />
-              <CopyLinkButton url={shareUrl} />
-              {!isMine && <ReportButton />}
-            </div>
           </div>
         </div>
+
+        {/* A private/link-only file's page shouldn't suddenly recommend
+            public content — that's surprising on what's meant to read as a
+            private share. Public files still get the full section below;
+            private ones get nothing more than a small way out to Discover. */}
+        {!isPublic && (
+          <p className="mt-6 text-center text-xs text-muted-foreground">
+            <Link href="/discover" className="text-primary hover:underline">
+              Explore public uploads
+            </Link>
+          </p>
+        )}
       </div>
 
-      {related.length > 0 && (
+      {isPublic && related.length > 0 && (
         <section className="border-t border-border px-6 py-14 md:px-10">
           <div className="mx-auto max-w-6xl">
             <div className="mb-6 flex flex-wrap items-end justify-between gap-4">

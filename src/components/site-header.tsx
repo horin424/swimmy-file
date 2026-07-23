@@ -14,8 +14,8 @@ function SearchFormFallback() {
       <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
       <Input
         disabled
-        placeholder="Search videos, tags, categories..."
-        aria-label="Search videos, tags, categories"
+        placeholder="Search public uploads, tags, categories..."
+        aria-label="Search public uploads, tags, categories"
         className="h-9 rounded-full border-border bg-accent pl-9"
       />
     </div>

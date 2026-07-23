@@ -15,6 +15,7 @@ import {
   LogIn,
   UserPlus,
   Sparkles,
+  Gauge,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -190,7 +191,8 @@ export function HomeUploadHero() {
 
   const handleCopy = async (displayUrl: string) => {
     try {
-      await navigator.clipboard.writeText(`https://${displayUrl}`);
+      // displayUrl is already a full https:// URL (see use-upload-flow.ts).
+      await navigator.clipboard.writeText(displayUrl);
     } catch {
       // clipboard API unavailable — still show optimistic feedback in this prototype
     }
@@ -408,10 +410,6 @@ export function HomeUploadHero() {
 
   // stage === "ready"
   const { eligibility } = state;
-  const guestNote =
-    eligibility.userType === "guest"
-      ? `Guest uploads are available up to ${formatBytes(GUEST_UPLOAD_LIMIT_BYTES)} per IP (${formatBytes(eligibility.guestRemainingBytes)} remaining). Sign in to upload more and manage your files.`
-      : null;
 
   return (
     <div className="w-full">
@@ -454,8 +452,36 @@ export function HomeUploadHero() {
         />
       </button>
 
-      <div className="relative mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground/70">
-        <span>{guestNote ?? "Share instantly"}</span>
+      {eligibility.userType === "guest" ? (
+        // Business-critical constraint — a small muted footer line was easy
+        // to miss, so this gets card-level visual weight instead.
+        <div className="mx-auto mt-4 flex max-w-md items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-left">
+          <Gauge className="h-5 w-5 shrink-0 text-primary" />
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-foreground">
+              Guest upload: {formatBytes(eligibility.guestRemainingBytes)} remaining /{" "}
+              {formatBytes(GUEST_UPLOAD_LIMIT_BYTES)} per IP
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              <Link href="/login" className="font-medium text-primary hover:underline">
+                Sign in
+              </Link>{" "}
+              to upload more and manage your files.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <p className="mt-4 text-center text-sm text-muted-foreground">
+          Signed in — uploads are saved to{" "}
+          <Link href="/me" className="font-medium text-primary hover:underline">
+            My Page
+          </Link>
+          . Manage links, expiration, and visibility anytime.
+        </p>
+      )}
+
+      <div className="relative mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground/70">
+        <span>Share instantly</span>
         <span aria-hidden className="text-muted-foreground/40">
           ·
         </span>

@@ -167,8 +167,8 @@ function SearchBox({ initialQuery }: { initialQuery: string }) {
               setActiveIndex(-1);
             }
           }}
-          placeholder="Search videos, tags, categories..."
-          aria-label="Search videos, tags, categories"
+          placeholder="Search public uploads, tags, categories..."
+          aria-label="Search public uploads, tags, categories"
           autoComplete="off"
           className="h-9 rounded-full border-border bg-accent pl-9 focus-visible:border-primary/50"
         />
