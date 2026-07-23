@@ -133,24 +133,22 @@ export function useUploadFlow() {
         if (elig.userType === "guest") recordUpload(file.size);
 
         // Mock stand-in for the real POST /api/upload/complete response —
-        // picks an existing demo video so the generated link leads
+        // picks an existing demo video purely so the generated link leads
         // somewhere real instead of a 404, until there's a backend that
-        // actually creates a File/Video record. displayTitle/fileSizeBytes
-        // intentionally come from that demo record, not the real selected
-        // `file` — otherwise the complete screen would show one file name/
-        // size while /d/[shareToken] (reading the demo's real mock data)
-        // shows another, which is exactly the "opened link shows a
-        // different file" inconsistency this is standing in to avoid.
+        // actually stores the uploaded file. Only the shareToken comes from
+        // that demo record; displayTitle/fileSizeBytes reflect the real
+        // selected `file` so the confirmation screen always names the file
+        // the user actually just uploaded. (Since nothing is really stored
+        // yet, opening the resulting /d/[shareToken] link still shows that
+        // demo record's own mock name/size — a known limitation of this
+        // no-backend prototype, not something this screen can fix.)
         const demo = videos[Math.floor(Math.random() * Math.min(videos.length, 12))];
         const shareToken = demo.shareToken;
         const result: CompletedUpload = {
           fileName: file.name,
-          // Quick Share default: displayTitle = originalFileName. Here
-          // that's the demo's title (see comment above) — only "Add
-          // details for Discover" (publishToDiscover, below) changes it
-          // otherwise.
-          displayTitle: demo.title,
-          fileSizeBytes: demo.fileSizeMb * 1024 * 1024,
+          // Quick Share default: displayTitle = originalFileName.
+          displayTitle: file.name,
+          fileSizeBytes: file.size,
           shareToken,
           displayUrl: `https://swimmyfile.io/d/${shareToken}`,
           hrefUrl: `/d/${shareToken}`,
