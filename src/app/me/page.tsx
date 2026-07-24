@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Eye, HardDrive, Upload as UploadIcon, Film, LifeBuoy, Gauge, FileUp } from "lucide-react";
+import { Eye, HardDrive, Upload as UploadIcon, FolderOpen, LifeBuoy, Gauge, FileUp } from "lucide-react";
 import { VideoThumb } from "@/components/video-thumb";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +29,7 @@ export default function DashboardPage() {
   );
   const storagePct = Math.round((currentUserStorage.usedGb / currentUserStorage.totalGb) * 100);
   const totalViews = myVideos.reduce((sum, v) => sum + v.views, 0);
+  const totalDownloads = myVideos.reduce((sum, v) => sum + v.downloadCount, 0);
   const totalReports = myVideos.reduce((sum, v) => sum + v.reportCount, 0);
 
   return (
@@ -64,11 +65,11 @@ export default function DashboardPage() {
             className="gap-1.5 bg-gradient-brand text-white hover:opacity-90"
           >
             <UploadIcon className="h-3.5 w-3.5" />
-            Upload a video
+            Upload files
           </Button>
-          <Button render={<Link href="/me/videos" />} nativeButton={false} variant="outline" size="sm" className="gap-1.5">
-            <Film className="h-3.5 w-3.5" />
-            View my videos
+          <Button render={<Link href="/me/uploads" />} nativeButton={false} variant="outline" size="sm" className="gap-1.5">
+            <FolderOpen className="h-3.5 w-3.5" />
+            View my uploads
           </Button>
           <Button render={<Link href="/support" />} nativeButton={false} variant="outline" size="sm" className="gap-1.5">
             <LifeBuoy className="h-3.5 w-3.5" />
@@ -79,8 +80,8 @@ export default function DashboardPage() {
 
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[
-          { label: "Total videos", value: myVideos.length },
-          { label: "Total views", value: formatCount(totalViews) },
+          { label: "Total uploads", value: myVideos.length },
+          { label: "Views / downloads", value: `${formatCount(totalViews)} / ${formatCount(totalDownloads)}` },
           { label: "Storage used", value: `${storagePct}%` },
           { label: "Flagged for review", value: totalReports, accent: totalReports > 0 },
         ].map((s) => (
@@ -134,8 +135,7 @@ export default function DashboardPage() {
             </div>
             <Progress value={storagePct} className="h-1.5" />
             <p className="text-xs text-muted-foreground/70">
-              New accounts: 5 uploads/day · 2GB per file · 10GB total.{" "}
-              <span className="text-primary">Upgrade for more</span>
+              New accounts: 5 uploads/day · 2GB per file · 10GB total. More storage plans coming later.
             </p>
           </div>
         </div>
@@ -143,7 +143,7 @@ export default function DashboardPage() {
         <div className="rounded-2xl border border-border bg-card/40 p-5">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Recent uploads</h2>
-            <Link href="/me/videos" className="text-xs text-primary hover:underline">
+            <Link href="/me/uploads" className="text-xs text-primary hover:underline">
               View all
             </Link>
           </div>

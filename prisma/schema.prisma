@@ -197,7 +197,7 @@ model SharePackage {
   discoverEnabled Boolean       @default(false)
   // Denormalized sum/count over `files` (BigInt: same reasoning as the old
   // Video.fileSize — a package's total can exceed Int32 range) — kept on
-  // the package row so list views (Discover, My Videos) don't need to
+  // the package row so list views (Discover, My Uploads) don't need to
   // aggregate PackageFile on every read.
   totalSizeBytes  BigInt        @default(0)
   fileCount       Int           @default(0)

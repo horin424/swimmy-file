@@ -18,8 +18,9 @@ import { toast } from "sonner";
 
 const categories = [
   { value: "general", label: "General inquiry" },
-  { value: "copyright", label: "Copyright / rights holder request" },
-  { value: "report", label: "Report a video" },
+  { value: "copyright", label: "Copyright request" },
+  { value: "report", label: "Report abuse" },
+  { value: "upload", label: "Upload issue" },
   { value: "account", label: "Account issue" },
 ];
 
@@ -95,7 +96,7 @@ export default function SupportPage() {
 
             <div>
               <Label htmlFor="related-url" className="mb-1.5 text-xs text-muted-foreground">
-                Related video link (optional)
+                Related shared link (optional)
               </Label>
               <Input id="related-url" placeholder="swimmyfile.io/d/..." />
             </div>

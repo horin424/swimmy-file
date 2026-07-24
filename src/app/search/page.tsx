@@ -15,7 +15,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { videos, browsableCategories, trendingTags } from "@/lib/mock-data";
+import { videos, browsableCategories, trendingTags, videoToPackage } from "@/lib/mock-data";
+import { fileTypeLabel } from "@/lib/file-type";
 
 type Sort = "popular" | "recent" | "views";
 type Period = "all" | "24h" | "7d" | "30d";
@@ -75,12 +76,20 @@ function SearchResults() {
     let list = videos.filter((v) => v.status === "active" && v.visibility === "public");
     if (queryDraft.trim()) {
       const q = queryDraft.trim().toLowerCase();
-      list = list.filter(
-        (v) =>
-          v.title.toLowerCase().includes(q) ||
-          v.tags.some((t) => t.includes(q)) ||
-          v.uploader.handle.toLowerCase().includes(q),
-      );
+      // Search target = the package plus the files inside it (title,
+      // description, tags, uploader, file names, file types) — but the
+      // result is still always one package card per match, never a
+      // separate card per file (see VideoCard's package-level rendering).
+      list = list.filter((v) => {
+        if (v.title.toLowerCase().includes(q)) return true;
+        if (v.description.toLowerCase().includes(q)) return true;
+        if (v.tags.some((t) => t.includes(q))) return true;
+        if (v.uploader.handle.toLowerCase().includes(q)) return true;
+        const pkg = videoToPackage(v);
+        if (pkg.files.some((f) => f.displayName.toLowerCase().includes(q))) return true;
+        if (pkg.files.some((f) => fileTypeLabel(f.fileType).toLowerCase().includes(q))) return true;
+        return false;
+      });
     }
     if (category !== "all") {
       list = list.filter((v) => v.category === category);

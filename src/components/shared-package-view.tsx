@@ -99,7 +99,9 @@ export function SharedPackageView({
             {canDownloadZip(pkg) && (
               <DownloadZipButton shareToken={pkg.shareToken} title={pkg.title} totalSizeBytes={pkg.totalSizeBytes} />
             )}
-            {!isMine && <ReportButton />}
+            {!isMine && (
+              <ReportButton files={pkg.files.map((f) => ({ id: f.id, displayName: f.displayName }))} />
+            )}
           </div>
 
           <ul className="mt-5 flex flex-col gap-2">

@@ -27,9 +27,9 @@ export default function TermsPage() {
 
       <h2>1. The Service</h2>
       <p>
-        Swimmy File is a video and file sharing service. Users may upload files, receive a shareable
-        link, and choose to make content public (discoverable within the Service) or private
-        (accessible only via direct link).
+        Swimmy File is a file sharing service. Users may upload one or more files as a shared upload
+        package, receive a single shareable link, and choose to make content public (discoverable
+        within the Service) or link only (accessible only via direct link).
       </p>
 
       <h2>2. Accounts</h2>

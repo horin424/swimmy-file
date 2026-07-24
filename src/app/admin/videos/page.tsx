@@ -74,7 +74,7 @@ export default function AdminVideosPage() {
     <AdminShell>
       <div className="mx-auto max-w-7xl px-6 py-8 md:px-10">
         <div className="mb-6">
-          <h1 className="text-2xl font-semibold tracking-tight">Videos</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Uploads</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Review flagged content and manage visibility across the platform.
           </p>
@@ -118,7 +118,7 @@ export default function AdminVideosPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Video</TableHead>
+                <TableHead>Upload</TableHead>
                 <TableHead>Uploader</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Reports</TableHead>

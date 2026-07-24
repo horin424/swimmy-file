@@ -282,9 +282,9 @@ export const currentUserUploadLimit: UploadLimits = {
 };
 
 // Upload History is the pipeline view (did the upload/processing/thumbnail
-// steps succeed), distinct from My Videos (the published-video management
-// view) — same underlying videos, reframed, plus one synthetic failed
-// attempt that never became a real Video record (so it has no shareToken).
+// steps succeed), distinct from My Uploads (the package management view) —
+// same underlying videos, reframed, plus one synthetic failed attempt that
+// never became a real Video record (so it has no shareToken).
 const failedUploadEntry: UploadHistoryEntry = {
   id: "upload_failed_1",
   title: "clip_export_final_v3.mov",

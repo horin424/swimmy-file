@@ -31,20 +31,33 @@ const reasons = [
   { value: "other", label: "Other" },
 ];
 
-export function ReportButton({ variant = "default" }: { variant?: "default" | "icon" }) {
+// Report a whole shared upload by default — that's the recipient's actual
+// unit of complaint (a bad link), matching the package model everywhere
+// else. Optionally narrow to one file inside it when there's more than one
+// (see the `files` prop, only passed from the shared package page — a
+// Discover card's icon-variant report never has a file list to offer).
+const ENTIRE_UPLOAD_VALUE = "__entire_upload__";
+
+export function ReportButton({
+  variant = "default",
+  files,
+}: {
+  variant?: "default" | "icon";
+  files?: { id: string; displayName: string }[];
+}) {
   const { status } = useSession();
   const [open, setOpen] = useState(false);
 
   const handleTriggerClick = (e: React.MouseEvent) => {
     // The icon variant lives inside a VideoCard's Link (thumbnail overlay) —
-    // stop it from also triggering navigation to the video.
+    // stop it from also triggering navigation to the shared upload.
     e.preventDefault();
     e.stopPropagation();
     // Reporting requires an account — guests get a notice instead of the
     // report form, same idea as the email-verification gate on uploads
     // (block the action, tell the user why, no dead-end UI).
     if (status !== "authenticated") {
-      toast.error("Log in to report this upload.");
+      toast.error("Log in to report this shared upload.");
       return;
     }
     setOpen(true);
@@ -56,7 +69,7 @@ export function ReportButton({ variant = "default" }: { variant?: "default" | "i
         <Button
           size="icon-sm"
           variant="outline"
-          aria-label="Report this upload"
+          aria-label="Report this shared upload"
           className="bg-black/55 text-white/90 backdrop-blur-sm hover:bg-black/70 hover:text-white"
           onClick={handleTriggerClick}
         >
@@ -65,12 +78,12 @@ export function ReportButton({ variant = "default" }: { variant?: "default" | "i
       ) : (
         <Button size="sm" variant="outline" className="gap-1.5 text-muted-foreground" onClick={handleTriggerClick}>
           <Flag className="h-3.5 w-3.5" />
-          Report
+          Report this shared upload
         </Button>
       )}
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Report this upload</DialogTitle>
+          <DialogTitle>Report this shared upload</DialogTitle>
           <DialogDescription>
             Help us keep Swimmy File safe. Reports are reviewed by our moderation team.
           </DialogDescription>
@@ -94,6 +107,33 @@ export function ReportButton({ variant = "default" }: { variant?: "default" | "i
               </SelectContent>
             </Select>
           </div>
+          {/* Nice-to-have per the MVP report model: default target is the
+              whole package; narrowing to one file is optional and only
+              offered when there's more than one to choose between. */}
+          {files && files.length > 1 && (
+            <div>
+              <Label className="mb-1.5 text-xs text-muted-foreground">Which file is the issue? (optional)</Label>
+              <Select
+                defaultValue={ENTIRE_UPLOAD_VALUE}
+                items={{
+                  [ENTIRE_UPLOAD_VALUE]: "Entire shared upload",
+                  ...Object.fromEntries(files.map((f) => [f.id, f.displayName])),
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Entire shared upload" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ENTIRE_UPLOAD_VALUE}>Entire shared upload</SelectItem>
+                  {files.map((f) => (
+                    <SelectItem key={f.id} value={f.id}>
+                      {f.displayName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div>
             <Label className="mb-1.5 text-xs text-muted-foreground">Details (optional)</Label>
             <Textarea placeholder="Add any additional context..." rows={3} />

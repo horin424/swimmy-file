@@ -12,7 +12,7 @@ export default function AdminDashboardPage() {
   const bannedUsers = adminUsers.filter((u) => u.status === "banned");
 
   const stats = [
-    { label: "Total videos", value: videos.length, icon: Film, href: "/admin/videos" },
+    { label: "Total uploads", value: videos.length, icon: Film, href: "/admin/videos" },
     { label: "Total users", value: adminUsers.length, icon: Users, href: "/admin/users" },
     { label: "Flagged for review", value: flaggedVideos.length, icon: Flag, href: "/admin/reports", accent: true },
     { label: "Open inquiries", value: openInquiries.length, icon: Inbox, href: "/admin/inquiries" },

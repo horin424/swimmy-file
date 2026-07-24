@@ -109,7 +109,7 @@ function DeleteAccountDialog() {
         <DialogHeader>
           <DialogTitle>Delete account</DialogTitle>
           <DialogDescription>
-            This permanently removes your account and all uploaded videos. This can&apos;t be undone.
+            This permanently removes your account and all uploaded files. This can&apos;t be undone.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-3">
@@ -207,7 +207,7 @@ export default function SettingsPage() {
         <div className="flex items-center justify-between rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5">
           <div>
             <p className="text-sm font-medium text-destructive">Delete account</p>
-            <p className="text-xs text-muted-foreground">Permanently remove your account and videos.</p>
+            <p className="text-xs text-muted-foreground">Permanently remove your account and files.</p>
           </div>
           <DeleteAccountDialog />
         </div>

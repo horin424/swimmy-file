@@ -52,7 +52,7 @@ export default function AdminReportsPage() {
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Reports</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Individual reports filed against videos, separate from overall video moderation.
+              Individual reports filed against shared uploads, separate from overall upload moderation.
             </p>
           </div>
           {openCount > 0 && (
@@ -93,7 +93,7 @@ export default function AdminReportsPage() {
                     href="/admin/videos"
                     className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
                   >
-                    Manage this video
+                    Manage this upload
                   </Link>
                   <Select
                     value={status}

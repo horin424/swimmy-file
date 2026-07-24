@@ -10,7 +10,7 @@ export default function LoginPage() {
   return (
     <AuthLayout
       title="Welcome back"
-      subtitle="Log in to manage your videos"
+      subtitle="Log in to manage your uploads"
       footer={
         <>
           Don&apos;t have an account?{" "}

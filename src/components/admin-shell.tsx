@@ -23,7 +23,7 @@ import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "./ui/sheet";
 
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/videos", label: "Videos", icon: Film },
+  { href: "/admin/videos", label: "Uploads", icon: Film },
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/reports", label: "Reports", icon: Flag },
   { href: "/admin/blacklist", label: "Blacklist", icon: ShieldBan },
