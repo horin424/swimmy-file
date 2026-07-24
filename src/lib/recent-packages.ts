@@ -42,3 +42,19 @@ export function getRecentPackage(shareToken: string): SharePackage | null {
     return null;
   }
 }
+
+// Mock stand-in for the real backend incrementing package.zipDownloadCount
+// once a ZIP download actually starts (see lib/package-zip.ts). Only ever
+// affects a package this browser itself uploaded and still has stashed
+// locally — a no-op for demo/mock packages, same as the rest of this store.
+export function incrementZipDownloadCount(shareToken: string) {
+  try {
+    const store = readStore();
+    const pkg = store[shareToken];
+    if (!pkg) return;
+    store[shareToken] = { ...pkg, zipDownloadCount: (pkg.zipDownloadCount ?? 0) + 1 };
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+  } catch {
+    // Storage unavailable — the download still happened, it just won't be counted.
+  }
+}

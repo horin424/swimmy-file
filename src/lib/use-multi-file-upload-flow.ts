@@ -134,6 +134,8 @@ function toRecentPackageRecord(result: CompletedPackage, ownerType: "GUEST" | "U
     reportCount: 0,
     createdAt: result.createdAt,
     expiresAt: result.expiresAt,
+    zipStatus: "NONE",
+    zipDownloadCount: 0,
   };
 }
 

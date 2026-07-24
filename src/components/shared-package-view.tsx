@@ -7,8 +7,10 @@ import { VideoCard } from "@/components/video-card";
 import { CopyLinkButton } from "@/components/copy-link-button";
 import { ReportButton } from "@/components/report-button";
 import { PackageFileRow } from "@/components/package-file-row";
+import { DownloadZipButton } from "@/components/download-zip-button";
 import { Button } from "@/components/ui/button";
 import { getRecentPackage } from "@/lib/recent-packages";
+import { canDownloadZip } from "@/lib/package-zip";
 import { formatCount } from "@/lib/mock-data";
 import { formatBytes } from "@/lib/utils";
 import type { SharePackage, Video } from "@/lib/types";
@@ -85,12 +87,18 @@ export function SharedPackageView({
 
           {/* Inline URL + Copy Link pill — same layout as the upload
               complete screen, so the two read as one consistent pattern
-              instead of a button floating away from the link it copies. */}
-          <div className="mt-4 flex items-center gap-2">
+              instead of a button floating away from the link it copies.
+              Download all as ZIP sits right beside it (package-level
+              actions, close to the file list below) — visible but not
+              styled as more important than the summary above it. */}
+          <div className="mt-4 flex flex-wrap items-center gap-2">
             <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-border bg-background/60 p-2 pl-4">
               <code className="flex-1 truncate text-left text-sm text-muted-foreground">{fullShareUrl}</code>
               <CopyLinkButton url={shareUrl} />
             </div>
+            {canDownloadZip(pkg) && (
+              <DownloadZipButton shareToken={pkg.shareToken} title={pkg.title} totalSizeBytes={pkg.totalSizeBytes} />
+            )}
             {!isMine && <ReportButton />}
           </div>
 
@@ -99,11 +107,6 @@ export function SharedPackageView({
               <PackageFileRow key={f.id} index={i + 1} file={f} />
             ))}
           </ul>
-
-          {/* Deliberately understated — plain centered text, not a
-              full-width disabled button — so it reads as a coming-soon
-              note rather than a broken primary download action. */}
-          <p className="mt-4 text-center text-xs text-muted-foreground/50">Download all as ZIP — coming later</p>
         </div>
 
         {/* A private/link-only package's page shouldn't suddenly recommend

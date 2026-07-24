@@ -41,6 +41,8 @@ import { useMultiFileUploadFlow, type CompletedPackage, type DiscoverDetails } f
 import { MultiFileUploadDropzone } from "@/components/multi-file-upload-dropzone";
 import { SelectedFileList } from "@/components/selected-file-list";
 import { UploadProgressList } from "@/components/upload-progress-list";
+import { DownloadZipButton } from "@/components/download-zip-button";
+import { canDownloadZip } from "@/lib/package-zip";
 import { useSession } from "@/lib/session";
 import { categories } from "@/lib/mock-data";
 import { toast } from "sonner";
@@ -336,11 +338,11 @@ export function HomeUploadHero() {
           </div>
         </div>
 
-        {/* Open link leads (not Copy link, already handled above it) since
-            checking the shared page is the next most common action after
-            copying — outlined in primary so it reads a step above the
-            plain-outline buttons next to it without competing with the
-            gradient Copy link button. */}
+        {/* Priority order: Copy link (already handled in the pill above),
+            Open link, Download all as ZIP, Show QR code, Upload another
+            package. Open link is outlined in primary so it reads a step
+            above the plain-outline buttons next to it without competing
+            with the gradient Copy link button. */}
         <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
           <Button
             render={<Link href={result.hrefUrl} target="_blank" />}
@@ -352,6 +354,10 @@ export function HomeUploadHero() {
             <ExternalLink className="h-3.5 w-3.5" />
             Open link
           </Button>
+
+          {canDownloadZip(result) && (
+            <DownloadZipButton shareToken={result.shareToken} title={result.title} totalSizeBytes={result.totalSizeBytes} />
+          )}
 
           <Dialog open={qrOpen} onOpenChange={setQrOpen}>
             <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setQrOpen(true)}>

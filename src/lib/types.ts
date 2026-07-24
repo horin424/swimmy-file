@@ -24,6 +24,12 @@ export interface PackageFile {
 
 export type PackageOwnerType = "GUEST" | "USER";
 
+// Cache/lifecycle state for a package's "Download all as ZIP" archive (see
+// lib/package-zip.ts) — NONE means never requested; PREPARING/READY/FAILED
+// mirror what a real background ZIP job would report. Nullable since most
+// packages never have one requested.
+export type ZipStatus = "NONE" | "PREPARING" | "READY" | "FAILED";
+
 export interface SharePackage {
   id: string;
   shareToken: string;
@@ -43,6 +49,16 @@ export interface SharePackage {
   uploader?: Uploader;
   createdAt: string;
   expiresAt: string;
+  // ZIP caching fields — prepared for a real backend (see
+  // prisma/schema.prisma's matching fields); the mock in lib/package-zip.ts
+  // doesn't persist any of these, it just generates a fresh mock ZIP every
+  // click.
+  zipStatus?: ZipStatus;
+  zipStorageKey?: string;
+  zipSizeBytes?: number;
+  zipGeneratedAt?: string;
+  zipExpiresAt?: string;
+  zipDownloadCount?: number;
 }
 
 export type VideoStatus = "processing" | "active" | "hidden" | "removed";

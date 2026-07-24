@@ -68,6 +68,17 @@ enum FileType {
   OTHER
 }
 
+// "Download all as ZIP" cache state (see SharePackage.zipStatus below and
+// src/lib/package-zip.ts on the frontend, which mirrors this exact set of
+// values). NONE is the default for a package that's never had a ZIP
+// requested — distinct from the field being genuinely unset/nullable.
+enum ZipStatus {
+  NONE
+  PREPARING
+  READY
+  FAILED
+}
+
 enum ReportReason {
   COPYRIGHT
   SPAM
@@ -193,6 +204,23 @@ model SharePackage {
   expiresAt       DateTime?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
+
+  // "Download all as ZIP" cache (src/lib/package-zip.ts's
+  // MAX_SYNC_ZIP_SIZE_BYTES/MAX_ZIP_SIZE_BYTES govern when this is even
+  // offered on the frontend). zipStatus starts null/unset until the first
+  // request; a real backend sets PREPARING -> READY (with
+  // zipStorageKey/zipSizeBytes/zipGeneratedAt/zipExpiresAt populated) or
+  // FAILED. A still-valid READY zip (zipExpiresAt in the future) should be
+  // served back as-is instead of regenerating.
+  zipStatus       ZipStatus?
+  zipStorageKey   String?
+  // Bytes — same BigInt reasoning as totalSizeBytes/PackageFile.fileSizeBytes.
+  zipSizeBytes    BigInt?
+  zipGeneratedAt  DateTime?
+  zipExpiresAt    DateTime?
+  // Separate from downloadCount (which tracks individual PackageFile
+  // downloads) — this counts "Download all as ZIP" clicks specifically.
+  zipDownloadCount Int          @default(0)
 
   // Not in the originally requested field list, but Category otherwise has no
   // relation to SharePackage anywhere in the schema, which would make it a

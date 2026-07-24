@@ -247,6 +247,9 @@ export function videoToPackage(video: Video): SharePackage {
     uploader: video.uploader,
     createdAt: video.createdAt,
     expiresAt: video.expiresAt,
+    // No ZIP ever requested for a fresh mock package — see lib/package-zip.ts.
+    zipStatus: "NONE",
+    zipDownloadCount: 0,
   };
 }
 
