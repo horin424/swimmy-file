@@ -175,24 +175,6 @@ function DiscoverDetailsSection({
           <p className="mt-1 text-xs text-muted-foreground/70">Add tags that describe the shared package.</p>
         </div>
 
-        {/* Read-only — files aren't individually editable here, just shown
-            so the user can see what they're about to publish as one item. */}
-        <div className="rounded-lg border border-border/50 bg-background/30 p-3">
-          <p className="text-xs font-medium text-muted-foreground/70">Files in this shared upload</p>
-          <ul className="mt-1.5 flex flex-col gap-1">
-            {result.files.map((f, i) => (
-              <li key={i} className="flex items-center justify-between gap-3 text-xs">
-                <span className="min-w-0 truncate text-foreground" title={f.fileName}>
-                  {i + 1}. {f.fileName}
-                </span>
-                <span className="shrink-0 text-muted-foreground">
-                  {fileTypeLabel(f.fileType)} · {formatBytes(f.fileSizeBytes)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-
         <p className="text-xs text-muted-foreground/70">
           For Discover, publish related files together. If your files are unrelated, create separate shared uploads.
         </p>
