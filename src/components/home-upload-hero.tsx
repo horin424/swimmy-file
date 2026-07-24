@@ -35,6 +35,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formatBytes } from "@/lib/utils";
+import { fileTypeLabel } from "@/lib/file-type";
 import { GUEST_UPLOAD_LIMIT_BYTES } from "@/lib/upload-eligibility";
 import { useMultiFileUploadFlow, type CompletedPackage, type DiscoverDetails } from "@/lib/use-multi-file-upload-flow";
 import { MultiFileUploadDropzone } from "@/components/multi-file-upload-dropzone";
@@ -281,16 +282,20 @@ export function HomeUploadHero() {
           </p>
 
           {/* Full file list — soft border/bg (vs. the URL field's stronger
-              border above) so the two don't visually compete. */}
+              border above) so the two don't visually compete. Numbered so
+              identically-named files (duplicate uploads) read as distinct
+              rows rather than a rendering glitch. */}
           <div className="mt-3 rounded-xl border border-border/40 bg-background/20 px-4 py-3">
             <p className="text-xs font-medium text-muted-foreground/70">Files</p>
-            <ul className="mt-1.5 flex flex-col gap-1.5">
+            <ul className="mt-1.5 flex flex-col gap-2">
               {result.files.map((f, i) => (
                 <li key={i} className="flex items-center justify-between gap-3 text-sm">
-                  <span className="truncate font-medium text-foreground" title={f.fileName}>
-                    {f.fileName}
+                  <span className="min-w-0 truncate font-medium text-foreground" title={f.fileName}>
+                    {i + 1}. {f.fileName}
                   </span>
-                  <span className="shrink-0 text-xs text-muted-foreground">{formatBytes(f.fileSizeBytes)}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {fileTypeLabel(f.fileType)} · {formatBytes(f.fileSizeBytes)}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -459,6 +464,7 @@ export function HomeUploadHero() {
   // (nothing chosen yet) and the review list (one or more files chosen,
   // not yet uploading) share the same guest/auth note and footer below.
   const { eligibility } = state;
+  const selectedTotalBytes = state.stage === "selecting" ? state.files.reduce((sum, f) => sum + f.file.size, 0) : 0;
 
   return (
     <div className="w-full">
@@ -484,6 +490,12 @@ export function HomeUploadHero() {
               Guest uploads: {formatBytes(eligibility.guestRemainingBytes)} remaining /{" "}
               {formatBytes(GUEST_UPLOAD_LIMIT_BYTES)} per IP
             </p>
+            {state.stage === "selecting" && (
+              <p className="mt-0.5 text-xs text-foreground">
+                Selected total: {formatBytes(selectedTotalBytes)} · Remaining after upload:{" "}
+                {formatBytes(Math.max(0, eligibility.guestRemainingBytes - selectedTotalBytes))}
+              </p>
+            )}
             <p className="mt-0.5 text-xs text-muted-foreground">
               Guest uploads are available up to 1GB per IP.{" "}
               <Link href="/login" className="font-medium text-primary hover:underline">

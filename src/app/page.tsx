@@ -42,7 +42,7 @@ export default function HomePage() {
             Upload files and share them instantly.
           </h1>
           <p className="mt-2 max-w-lg text-sm text-muted-foreground md:text-base">
-            Drop a file below, get a link, and share it right away.
+            Drop files below, get one link, and share them right away.
           </p>
 
           <div className="mt-10 w-full">

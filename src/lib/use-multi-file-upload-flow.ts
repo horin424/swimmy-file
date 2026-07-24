@@ -2,10 +2,11 @@
 
 import { useCallback, useRef, useState } from "react";
 import QRCode from "qrcode";
-import { videos } from "./mock-data";
+import { videos, expiresIn } from "./mock-data";
 import { detectFileType } from "./file-type";
 import { checkGuestUploadLimit, useUploadEligibility } from "./upload-eligibility";
-import type { UploadEligibility, FileType } from "./types";
+import { saveRecentPackage } from "./recent-packages";
+import type { UploadEligibility, FileType, SharePackage, PackageFile } from "./types";
 
 const MAX_FILE_SIZE_BYTES = 2 * 1024 ** 3; // per-file cap, independent of the guest cumulative cap (checked against the combined total)
 
@@ -28,6 +29,7 @@ export interface CompletedPackageFile {
   fileName: string;
   fileSizeBytes: number;
   fileType: FileType;
+  mimeType: string;
 }
 
 // Mirrors the suggested POST /api/share-packages/complete response shape
@@ -49,6 +51,8 @@ export interface CompletedPackage {
   visibility: "Link only" | "Public";
   discoverEnabled: boolean;
   expiresLabel: string;
+  createdAt: string;
+  expiresAt: string;
   category?: string;
   description?: string;
   tags?: string[];
@@ -89,6 +93,48 @@ let idCounter = 0;
 function makeFileId(): string {
   idCounter += 1;
   return `sel_${idCounter}_${Date.now().toString(36)}`;
+}
+
+// Maps a CompletedPackage (the upload flow's own result shape) to the
+// SharePackage shape that mock-data.ts's getPackageByShareToken() and the
+// /d/[shareToken] page consume — so this browser's own just-completed
+// upload can be stashed via saveRecentPackage() and shown back to it
+// verbatim (see recent-packages.ts), instead of an unrelated demo package.
+function toRecentPackageRecord(result: CompletedPackage, ownerType: "GUEST" | "USER"): SharePackage {
+  const files: PackageFile[] = result.files.map((f, i) => ({
+    id: `${result.shareToken}_f${i}`,
+    originalFileName: f.fileName,
+    displayName: f.fileName,
+    fileSizeBytes: f.fileSizeBytes,
+    mimeType: f.mimeType,
+    fileType: f.fileType,
+    downloadCount: 0,
+  }));
+
+  return {
+    id: result.shareToken,
+    shareToken: result.shareToken,
+    ownerType,
+    title: result.title,
+    description: result.description,
+    files,
+    fileCount: result.fileCount,
+    totalSizeBytes: result.totalSizeBytes,
+    category: result.category,
+    tags: result.tags ?? [],
+    // CompletedPackage's "Link only" | "Public" maps to the SharePackage/
+    // Video Visibility union used everywhere else ("private" == link-only,
+    // never shown as a manageable private file the way a real PRIVATE
+    // visibility would be — see the Visibility enum's own note in
+    // prisma/schema.prisma).
+    visibility: result.visibility === "Public" ? "public" : "private",
+    discoverEnabled: result.discoverEnabled,
+    viewCount: 0,
+    downloadCount: 0,
+    reportCount: 0,
+    createdAt: result.createdAt,
+    expiresAt: result.expiresAt,
+  };
 }
 
 // Encapsulates the entire multi-file upload lifecycle (eligibility check ->
@@ -223,24 +269,26 @@ export function useMultiFileUploadFlow() {
         if (elig.userType === "guest") recordUpload(totalBytes);
 
         // Mock stand-in for the real POST /api/share-packages/complete
-        // response — picks an existing demo package purely so the
-        // generated link leads somewhere real instead of a 404, until
-        // there's a backend that actually stores the uploaded files. The
-        // file list/title/total size shown on the complete screen reflect
-        // the real selected files (not the demo's), same reasoning as the
-        // single-file version of this hook: the confirmation screen should
-        // always name what the user actually just uploaded. (Opening the
-        // resulting /d/[shareToken] link still shows that demo package's
-        // own mock files — a known limitation of this no-backend
-        // prototype, not something this screen can fix on its own.)
+        // response — picks an existing demo package purely to borrow a
+        // shareToken, until there's a backend that actually stores the
+        // uploaded files. The complete screen and the resulting
+        // /d/[shareToken] link both show the *real* selected files: see
+        // saveRecentPackage() below, which stashes them in this browser so
+        // /d/[shareToken] can show the same package back instead of the
+        // demo's own content. Anyone else opening the link (no matching
+        // localStorage entry) still sees that demo package — there's no
+        // real storage to serve the actual files to a different browser.
         const demo = videos[Math.floor(Math.random() * Math.min(videos.length, 12))];
         const shareToken = demo.shareToken;
         const resultFiles: CompletedPackageFile[] = selected.map((sf) => ({
           fileName: sf.file.name,
           fileSizeBytes: sf.file.size,
           fileType: sf.fileType,
+          mimeType: sf.file.type || "application/octet-stream",
         }));
         const defaultTitle = selected.length === 1 ? selected[0].file.name : `${selected.length} files`;
+        const createdAt = new Date().toISOString();
+        const expiresAt = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString();
         const result: CompletedPackage = {
           shareToken,
           displayUrl: `https://swimmyfile.io/d/${shareToken}`,
@@ -254,9 +302,14 @@ export function useMultiFileUploadFlow() {
           // Discover, so it stays link-only/unlisted.
           visibility: "Link only",
           discoverEnabled: false,
-          expiresLabel: "Expires in 7 days",
+          expiresLabel: expiresIn(expiresAt),
+          createdAt,
+          expiresAt,
         };
         setOverride({ stage: "complete", result });
+        // Stash the real upload so this browser's own /d/[shareToken] link
+        // shows what was actually uploaded — see toRecentPackageRecord.
+        saveRecentPackage(toRecentPackageRecord(result, elig.userType === "guest" ? "GUEST" : "USER"));
 
         QRCode.toDataURL(`${window.location.origin}/d/${shareToken}`, { margin: 1, width: 220 })
           .then((qrDataUrl) => {
@@ -277,26 +330,31 @@ export function useMultiFileUploadFlow() {
   // Share / Publish to Discover split. Only meaningful once a package has
   // finished uploading; a no-op otherwise. Mock stand-in for a real
   // PATCH /api/share-packages/:shareToken/publish — same reasoning as
-  // startUpload above.
-  const publishToDiscover = useCallback((details: DiscoverDetails) => {
-    setOverride((prev) =>
-      prev?.stage === "complete"
-        ? {
-            stage: "complete",
-            result: {
-              ...prev.result,
-              title: details.title,
-              category: details.category,
-              description: details.description,
-              tags: details.tags,
-              visibility: "Public",
-              discoverEnabled: true,
-              ...(details.expiresLabel ? { expiresLabel: details.expiresLabel } : null),
-            },
-          }
-        : prev,
-    );
-  }, []);
+  // startUpload above. Reads `state` directly (not via a functional
+  // setOverride updater) since it also needs to re-save the recent-package
+  // record afterward, which is a side effect that doesn't belong inside a
+  // state updater.
+  const publishToDiscover = useCallback(
+    (details: DiscoverDetails) => {
+      if (state.stage !== "complete") return;
+      const nextResult: CompletedPackage = {
+        ...state.result,
+        title: details.title,
+        category: details.category,
+        description: details.description,
+        tags: details.tags,
+        visibility: "Public",
+        discoverEnabled: true,
+        ...(details.expiresLabel ? { expiresLabel: details.expiresLabel } : null),
+      };
+      setOverride({ stage: "complete", result: nextResult });
+      // Publish to Discover is only ever reachable by authenticated users
+      // (see the status === "authenticated" gate in HomeUploadHero) — a
+      // guest publishing is never possible, so this is always "USER".
+      saveRecentPackage(toRecentPackageRecord(nextResult, "USER"));
+    },
+    [state],
+  );
 
   return { state, addFiles, removeFile, startUpload, cancel, reset, publishToDiscover };
 }

@@ -33,16 +33,24 @@ export function SelectedFileList({
         {files.length} {files.length === 1 ? "file" : "files"} selected
       </p>
       <p className="mt-0.5 text-xs text-muted-foreground">Total size: {formatBytes(totalBytes)}</p>
+      {/* Explicit per the client's Gofile/GigaFile-style direction: one
+          shared link covers everything selected, not one link per file. */}
+      <p className="mt-1.5 text-xs text-primary">
+        These files will be shared together with one link.
+      </p>
 
       <ul className="mt-4 flex max-h-64 flex-col gap-1.5 overflow-y-auto">
-        {files.map((sf) => (
+        {files.map((sf, i) => (
           <li
             key={sf.id}
             className="flex items-center justify-between gap-2 rounded-lg border border-border/50 bg-background/30 px-3 py-2"
           >
             <div className="min-w-0">
+              {/* Numbered so identically-named files (duplicate uploads,
+                  e.g. two "mksSandbox.log") read as distinct rows rather
+                  than a rendering glitch. */}
               <p className="truncate text-sm font-medium text-foreground" title={sf.file.name}>
-                {sf.file.name}
+                {i + 1}. {sf.file.name}
               </p>
               <p className="text-xs text-muted-foreground">
                 {fileTypeLabel(sf.fileType)} · {formatBytes(sf.file.size)}
