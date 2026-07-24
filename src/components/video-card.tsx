@@ -3,8 +3,9 @@ import { Eye, Download } from "lucide-react";
 import { VideoThumb } from "./video-thumb";
 import { ReportButton } from "./report-button";
 import { CopyLinkButton } from "./copy-link-button";
-import { cn } from "@/lib/utils";
-import { formatCount, formatFileSize, myVideoIds } from "@/lib/mock-data";
+import { cn, formatBytes } from "@/lib/utils";
+import { formatCount, myVideoIds, packageSummary } from "@/lib/mock-data";
+import { fileTypeLabel } from "@/lib/file-type";
 import type { Video } from "@/lib/types";
 
 export function VideoCard({
@@ -17,6 +18,12 @@ export function VideoCard({
   const rank = video.rank;
   const showRankBadge = typeof rank === "number" && rank <= 12;
   const isMine = myVideoIds.has(video.id);
+  const pkg = packageSummary(video);
+  // A single-file package still just reads as a video card (per the
+  // product direction: "if the package contains only one video, it can
+  // still look like a video card") — the multi-file badges only show up
+  // once there's actually more than one file to summarize.
+  const isSingleFile = pkg.fileCount <= 1;
 
   return (
     <Link
@@ -42,7 +49,14 @@ export function VideoCard({
         </p>
         {/* File-sharing metadata (type/size, views/downloads) instead of an
             uploader handle — a shared-file card, not a creator's video post. */}
-        <p className="text-xs text-muted-foreground">Video · {formatFileSize(video.fileSizeMb)}</p>
+        <p className="text-xs text-muted-foreground">
+          {isSingleFile
+            ? `${fileTypeLabel(pkg.fileTypes[0] ?? "VIDEO")} · ${formatBytes(pkg.totalSizeBytes)}`
+            : `${pkg.fileCount} files · ${formatBytes(pkg.totalSizeBytes)}`}
+        </p>
+        {!isSingleFile && (
+          <p className="text-xs text-muted-foreground/70">{pkg.fileTypes.map(fileTypeLabel).join(", ")}</p>
+        )}
         <div className="mt-auto flex items-center gap-3 text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
             <Eye className="h-3.5 w-3.5" />

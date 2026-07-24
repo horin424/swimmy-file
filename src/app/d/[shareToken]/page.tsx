@@ -1,108 +1,101 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Play, Eye, Download } from "lucide-react";
+import { Eye, Download } from "lucide-react";
 import { PublicLayout } from "@/components/public-layout";
-import { VideoThumb } from "@/components/video-thumb";
 import { VideoCard } from "@/components/video-card";
 import { CopyLinkButton } from "@/components/copy-link-button";
-import { DownloadButton } from "@/components/download-button";
 import { ReportButton } from "@/components/report-button";
+import { PackageFileRow } from "@/components/package-file-row";
 import { Button } from "@/components/ui/button";
-import { videos, myVideoIds, formatCount, formatFileSize } from "@/lib/mock-data";
+import { getPackageByShareToken, videos, myVideoIds, formatCount } from "@/lib/mock-data";
+import { formatBytes } from "@/lib/utils";
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", { year: "numeric", month: "short", day: "numeric" });
 
 // This is the file-sharing landing page (think Gofile/GigaFile), not a
-// video-watching page — deliberately no sidebar, no "More like this" rail,
-// no uploader profile block. Just: preview, file facts, and the actions
-// someone opening a shared link actually wants (download, copy, report).
-// See PublicLayout for the shared no-sidebar chrome used here, on /, and
-// on /upload.
-export default async function SharedFilePage({
+// video-watching page — one share link can hold one or more files (see
+// SharePackage/PackageFile in lib/types.ts). Deliberately no sidebar, no
+// "More like this" rail, no uploader profile block. Just: the file list and
+// the actions someone opening a shared link actually wants (download each
+// file, copy the link, report). See PublicLayout for the shared no-sidebar
+// chrome used here, on /, and on /upload.
+export default async function SharedPackagePage({
   params,
 }: {
   params: Promise<{ shareToken: string }>;
 }) {
   const { shareToken } = await params;
-  const video = videos.find((v) => v.shareToken === shareToken);
-  if (!video) notFound();
+  const pkg = getPackageByShareToken(shareToken);
+  if (!pkg) notFound();
 
   // CopyLinkButton prepends https:// itself, so it needs the bare domain —
   // the visible text uses the full URL instead (see client feedback: the
   // on-screen link should read as a real https:// URL, not a bare domain).
-  const shareUrl = `swimmyfile.io/d/${video.shareToken}`;
+  const shareUrl = `swimmyfile.io/d/${pkg.shareToken}`;
   const fullShareUrl = `https://${shareUrl}`;
   // You can't report your own upload — this is one of "my files".
-  const isMine = myVideoIds.has(video.id);
-  const isPublic = video.visibility === "public";
-  const related = isPublic ? videos.filter((v) => v.id !== video.id && v.category === video.category).slice(0, 6) : [];
+  const isMine = myVideoIds.has(pkg.id);
+  const isPublic = pkg.visibility === "public";
+  const related = isPublic ? videos.filter((v) => v.id !== pkg.id && v.category === pkg.category).slice(0, 6) : [];
 
   return (
     <PublicLayout>
       <div className="mx-auto max-w-xl px-6 py-10 md:py-14">
-        <div className="overflow-hidden rounded-2xl border border-border bg-card/50">
-          <div className="relative aspect-video w-full">
-            <VideoThumb gradient={video.thumbnailGradient} duration={video.durationSeconds} className="rounded-none">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm transition-transform hover:scale-105">
-                  <Play className="ml-1 h-6 w-6 fill-white text-white" />
-                </div>
-              </div>
-            </VideoThumb>
+        <div className="overflow-hidden rounded-2xl border border-border bg-card/50 p-6">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/70">Shared files</p>
+          <h1 className="mt-1 truncate text-lg font-semibold" title={pkg.title}>
+            {pkg.title}
+          </h1>
+
+          <p className="mt-2 text-sm text-muted-foreground">
+            {pkg.fileCount} {pkg.fileCount === 1 ? "file" : "files"} · {formatBytes(pkg.totalSizeBytes)} total
+          </p>
+          <p className="text-sm text-muted-foreground">Expires {dateFormatter.format(new Date(pkg.expiresAt))}</p>
+          <p className="mt-1 flex items-center gap-3 text-xs text-muted-foreground/70">
+            <span className="flex items-center gap-1">
+              <Eye className="h-3.5 w-3.5" />
+              {formatCount(pkg.viewCount)}
+            </span>
+            <span className="flex items-center gap-1">
+              <Download className="h-3.5 w-3.5" />
+              {formatCount(pkg.downloadCount)}
+            </span>
+            <span>{isPublic ? "Public — listed on Discover" : "Only people with this link can access these files"}</span>
+          </p>
+
+          {/* Copy Link/Report lead, right under the summary — these are
+              what someone opening a shared link actually came for; the
+              file list below is the main content, not a reason to scroll
+              past the actions first. */}
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <CopyLinkButton url={shareUrl} />
+            {!isMine && <ReportButton />}
           </div>
 
-          <div className="p-6">
-            <h1 className="truncate text-lg font-semibold" title={video.title}>
-              {video.title}
-            </h1>
+          <p className="mt-3 truncate rounded-lg bg-black/30 px-3 py-2 font-mono text-xs text-muted-foreground">
+            {fullShareUrl}
+          </p>
 
-            {/* Download/Copy Link lead, right under the title — these are
-                what someone opening a shared link actually came for; the
-                metadata list and preview below are secondary context, not
-                a reason to keep watching. */}
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <DownloadButton fileName={video.title} />
-              <CopyLinkButton url={shareUrl} />
-              {!isMine && <ReportButton />}
-            </div>
+          <ul className="mt-5 flex flex-col gap-2">
+            {pkg.files.map((f, i) => (
+              <PackageFileRow key={f.id} index={i + 1} file={f} />
+            ))}
+          </ul>
 
-            <p className="mt-3 truncate rounded-lg bg-black/30 px-3 py-2 font-mono text-xs text-muted-foreground">
-              {fullShareUrl}
-            </p>
-
-            <dl className="mt-4 flex flex-col gap-1.5 text-sm text-muted-foreground">
-              <div className="flex items-center justify-between">
-                <dt>File size</dt>
-                <dd className="text-foreground">{formatFileSize(video.fileSizeMb)}</dd>
-              </div>
-              <div className="flex items-center justify-between">
-                <dt>Uploaded</dt>
-                <dd className="text-foreground">{dateFormatter.format(new Date(video.createdAt))}</dd>
-              </div>
-              <div className="flex items-center justify-between">
-                <dt>Expires</dt>
-                <dd className="text-foreground">{dateFormatter.format(new Date(video.expiresAt))}</dd>
-              </div>
-              <div className="flex items-center justify-between">
-                <dt className="flex items-center gap-1.5">
-                  <Eye className="h-3.5 w-3.5" />
-                  Views
-                </dt>
-                <dd className="flex items-center gap-3 text-foreground">
-                  {formatCount(video.views)}
-                  <span className="flex items-center gap-1 text-muted-foreground">
-                    <Download className="h-3.5 w-3.5" />
-                    {formatCount(video.downloadCount)}
-                  </span>
-                </dd>
-              </div>
-            </dl>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled
+            title="Coming in a future update"
+            className="mt-4 w-full text-muted-foreground/60"
+          >
+            Download all as ZIP — coming later
+          </Button>
         </div>
 
-        {/* A private/link-only file's page shouldn't suddenly recommend
+        {/* A private/link-only package's page shouldn't suddenly recommend
             public content — that's surprising on what's meant to read as a
-            private share. Public files still get the full section below;
+            private share. Public packages still get the full section below;
             private ones get nothing more than a small way out to Discover. */}
         {!isPublic && (
           <p className="mt-6 text-center text-xs text-muted-foreground">

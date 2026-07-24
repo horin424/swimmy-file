@@ -38,13 +38,34 @@ enum Visibility {
   LINK_ONLY
 }
 
-enum VideoStatus {
+// Package-level lifecycle (the share link as a whole), distinct from
+// PackageFileStatus below (the individual file's own upload/processing state).
+enum PackageStatus {
   UPLOADING
   PROCESSING
   ACTIVE
   HIDDEN
   DELETED
   FAILED
+}
+
+enum PackageFileStatus {
+  UPLOADING
+  PROCESSING
+  ACTIVE
+  FAILED
+}
+
+// Client-side detectFileType() in src/lib/file-type.ts mirrors this exactly —
+// swapping the mock for real upload responses only touches where the value
+// comes from, not the enum shape.
+enum FileType {
+  VIDEO
+  IMAGE
+  AUDIO
+  DOCUMENT
+  ARCHIVE
+  OTHER
 }
 
 enum ReportReason {
@@ -112,7 +133,7 @@ model User {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
-  videos      Video[]
+  sharePackages SharePackage[]
   reports     Report[]     @relation("ReportedBy")
   inquiries   Inquiry[]
   adminLogs   AdminLog[]   @relation("AdminActor")
@@ -124,64 +145,70 @@ model User {
   @@map("users")
 }
 
-model Video {
+// A share link now points at a *package* of one or more files (Gofile/
+// GigaFile-style multi-file share, not a single-video page — see the
+// client's "1 upload session -> multiple files -> 1 shared URL" direction).
+// Replaces the old single-file Video model; PackageFile below holds the
+// individual files.
+model SharePackage {
   id           String       @id @default(cuid())
-  uploaderType UploaderType @default(USER)
+  ownerType    UploaderType @default(USER)
   // Nullable to support guest uploads (MVP policy: guests can upload up to
-  // 1GB cumulative per IP before being required to log in — see
-  // GuestUploadUsage below). Always set for uploaderType = USER, always
-  // null for uploaderType = GUEST.
+  // 1GB cumulative *total across all files in a package* per IP before
+  // being required to log in — see GuestUploadUsage below). Always set for
+  // ownerType = USER, always null for ownerType = GUEST.
   userId       String?
   // hash(ip + IP_HASH_SALT) of the uploading request's IP, only set for
   // guest uploads — ties this row to the same GuestUploadUsage bucket that
   // enforces the cumulative cap. Never store the raw IP (see
   // GuestUploadUsage's own note and .env.example's IP_HASH_SALT).
   ipHash       String?
-  // Quick Share (the default upload mode — see use-upload-flow.ts on the
-  // frontend) sets this to originalFileName at creation time; there's no
-  // DB-level default since Postgres can't copy another column's value
-  // without a trigger. Only changes when Publish to Discover ("Add details
-  // for Discover") sets a real title.
-  title            String
-  description      String?
-  storagePath      String
-  originalFileName String
-  // Bytes. Int32 tops out around 2.1GB, well under the product's 50GB max file
-  // size, so this must be BigInt rather than Int.
-  fileSize         BigInt
-  mimeType         String
-  // Seconds. Nullable — unknown until post-upload processing determines it.
-  duration         Int?
-  thumbnailPath    String?
+  // Quick Share (the default upload mode — see
+  // use-multi-file-upload-flow.ts on the frontend) sets this to a name
+  // derived from the files themselves at creation time (the single file's
+  // own name, or "N files"); there's no DB-level default since that
+  // derivation needs the file list. Only changes when Publish to Discover
+  // ("Add details for Discover") sets a real title.
+  title       String
+  description String?
   // LINK_ONLY, not PUBLIC: Quick Share (the default for every upload,
-  // guest or logged-in) never makes a file public on its own — only
+  // guest or logged-in) never makes a package public on its own — only
   // Publish to Discover does, by explicitly setting this to PUBLIC.
-  visibility       Visibility  @default(LINK_ONLY)
-  status           VideoStatus @default(UPLOADING)
-  shareToken       String      @unique
-  viewCount        Int         @default(0)
-  downloadCount    Int         @default(0)
-  reportCount      Int         @default(0)
-  // Videos are intentionally excluded from Discover until explicitly enabled
-  // (anti-spam gate from the design doc), regardless of status/visibility.
-  discoverEnabled  Boolean     @default(false)
-  expiresAt        DateTime?
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
+  visibility      Visibility    @default(LINK_ONLY)
+  status          PackageStatus @default(UPLOADING)
+  shareToken      String        @unique
+  viewCount       Int           @default(0)
+  downloadCount   Int           @default(0)
+  reportCount     Int           @default(0)
+  // Packages are intentionally excluded from Discover until explicitly
+  // enabled (anti-spam gate from the design doc), regardless of
+  // status/visibility.
+  discoverEnabled Boolean       @default(false)
+  // Denormalized sum/count over `files` (BigInt: same reasoning as the old
+  // Video.fileSize — a package's total can exceed Int32 range) — kept on
+  // the package row so list views (Discover, My Videos) don't need to
+  // aggregate PackageFile on every read.
+  totalSizeBytes  BigInt        @default(0)
+  fileCount       Int           @default(0)
+  expiresAt       DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   // Not in the originally requested field list, but Category otherwise has no
-  // relation to Video anywhere in the schema, which would make it a dead table —
-  // added as nullable so a video can be uncategorized. Flag if this should be
-  // required instead, or removed if Category is meant to stay unlinked for now.
+  // relation to SharePackage anywhere in the schema, which would make it a
+  // dead table — added as nullable so a package can be uncategorized. Flag
+  // if this should be required instead, or removed if Category is meant to
+  // stay unlinked for now.
   categoryId String?
   category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   // SetNull rather than Restrict: now that guest uploads exist (userId
   // already nullable for them), a user closing their account shouldn't be
-  // blocked by files they shared — those links just stop being "owned" by
-  // anyone, same as a guest upload always was.
-  uploader  User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
-  tags      VideoTag[]
+  // blocked by packages they shared — those links just stop being "owned"
+  // by anyone, same as a guest upload always was.
+  uploader  User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  files     PackageFile[]
+  tags      PackageTag[]
   reports   Report[]
   inquiries Inquiry[]
 
@@ -197,7 +224,37 @@ model Video {
   // ORDER BY createdAt DESC) — the single-column indexes above satisfy the
   // literal request; this one is an added recommendation for that specific query.
   @@index([visibility, status, discoverEnabled, createdAt])
-  @@map("videos")
+  @@map("share_packages")
+}
+
+// One row per file inside a SharePackage. A single-file Quick Share still
+// gets exactly one of these — there's no special-cased "package of one".
+model PackageFile {
+  id               String             @id @default(cuid())
+  packageId        String
+  originalFileName String
+  // Editable independently of originalFileName (e.g. a future rename
+  // action) — originalFileName never changes after upload, displayName can.
+  displayName      String
+  // Bytes. Int32 tops out around 2.1GB, well under the product's 50GB max
+  // file size, so this must be BigInt rather than Int.
+  fileSizeBytes    BigInt
+  mimeType         String
+  fileType         FileType
+  storageKey       String
+  thumbnailKey     String?
+  // Seconds. Nullable — only meaningful for VIDEO/AUDIO, and unknown until
+  // post-upload processing determines it.
+  durationSeconds  Int?
+  downloadCount    Int                @default(0)
+  status           PackageFileStatus  @default(UPLOADING)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  package SharePackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  @@index([packageId])
+  @@map("package_files")
 }
 
 model Category {
@@ -207,7 +264,7 @@ model Category {
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
 
-  videos Video[]
+  packages SharePackage[]
 
   @@map("categories")
 }
@@ -218,26 +275,26 @@ model Tag {
   slug      String   @unique
   createdAt DateTime @default(now())
 
-  videos VideoTag[]
+  packages PackageTag[]
 
   @@map("tags")
 }
 
-model VideoTag {
-  videoId String
-  tagId   String
+model PackageTag {
+  packageId String
+  tagId     String
 
-  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
-  tag   Tag   @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  package SharePackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  tag     Tag          @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
-  @@id([videoId, tagId])
+  @@id([packageId, tagId])
   @@index([tagId])
-  @@map("video_tags")
+  @@map("package_tags")
 }
 
 model Report {
   id         String       @id @default(cuid())
-  videoId    String
+  packageId  String
   reporterId String?
   reason     ReportReason
   message    String?
@@ -245,10 +302,10 @@ model Report {
   createdAt  DateTime     @default(now())
   updatedAt  DateTime     @updatedAt
 
-  video    Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
-  reporter User? @relation("ReportedBy", fields: [reporterId], references: [id], onDelete: SetNull)
+  package  SharePackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  reporter User?        @relation("ReportedBy", fields: [reporterId], references: [id], onDelete: SetNull)
 
-  @@index([videoId])
+  @@index([packageId])
   @@index([status])
   @@map("reports")
 }
@@ -269,7 +326,7 @@ model UploadLimit {
   userId       String     @unique
   dailyCount   Int        @default(0)
   // Bytes. 10GB (the default total-storage cap) exceeds Int32 range, same
-  // reasoning as Video.fileSize — must be BigInt.
+  // reasoning as PackageFile.fileSizeBytes — must be BigInt.
   storageUsed  BigInt     @default(0)
   // Explicit stored cap rather than a value derived purely from trustLevel
   // in app code — lets a future paid plan (see Plan/StorageEntitlement
@@ -295,7 +352,7 @@ model GuestUploadUsage {
   // so the hash isn't reversible without it, and can be rotated.
   ipHash String @unique
 
-  // Bytes. Same BigInt reasoning as Video.fileSize/UploadLimit.storageUsed.
+  // Bytes. Same BigInt reasoning as PackageFile.fileSizeBytes/UploadLimit.storageUsed.
   totalUploadedBytes BigInt   @default(0)
   lastUploadedAt     DateTime @default(now())
   createdAt          DateTime @default(now())
@@ -307,7 +364,7 @@ model GuestUploadUsage {
 // --- Future billing extension (not implemented, not referenced by any
 // logic yet) ---------------------------------------------------------------
 // Kept here so adding paid capacity later is additive (new rows/relations)
-// rather than a schema migration that touches Video/User/UploadLimit.
+// rather than a schema migration that touches SharePackage/User/UploadLimit.
 
 model Plan {
   id                String @id @default(cuid())
@@ -356,19 +413,19 @@ model AdminLog {
 }
 
 model Inquiry {
-  id             String          @id @default(cuid())
-  userId         String?
-  email          String
-  category       InquiryCategory
-  subject        String
-  message        String
-  relatedVideoId String?
-  status         InquiryStatus   @default(OPEN)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  id               String          @id @default(cuid())
+  userId           String?
+  email            String
+  category         InquiryCategory
+  subject          String
+  message          String
+  relatedPackageId String?
+  status           InquiryStatus   @default(OPEN)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
 
-  user         User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
-  relatedVideo Video? @relation(fields: [relatedVideoId], references: [id], onDelete: SetNull)
+  user           User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  relatedPackage SharePackage? @relation(fields: [relatedPackageId], references: [id], onDelete: SetNull)
 
   @@index([status])
   @@map("inquiries")

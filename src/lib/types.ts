@@ -1,5 +1,50 @@
 export type Visibility = "public" | "private";
 
+// --- Share packages (multi-file upload model) --------------------------
+// A share link now points at a *package* of one or more files (Gofile/
+// GigaFile-style), not a single video. These mirror the suggested
+// SharePackage/PackageFile shape for the eventual real backend closely
+// enough that swapping mock data for real API responses only touches
+// where these values come from, not their shape (see mock-data.ts's
+// videoToPackage/getPackageByShareToken and use-multi-file-upload-flow.ts).
+
+export type FileType = "VIDEO" | "IMAGE" | "AUDIO" | "DOCUMENT" | "ARCHIVE" | "OTHER";
+
+export interface PackageFile {
+  id: string;
+  originalFileName: string;
+  displayName: string;
+  fileSizeBytes: number;
+  mimeType: string;
+  fileType: FileType;
+  thumbnailGradient?: [string, string];
+  durationSeconds?: number;
+  downloadCount: number;
+}
+
+export type PackageOwnerType = "GUEST" | "USER";
+
+export interface SharePackage {
+  id: string;
+  shareToken: string;
+  ownerType: PackageOwnerType;
+  title: string;
+  description?: string;
+  files: PackageFile[];
+  fileCount: number;
+  totalSizeBytes: number;
+  category?: string;
+  tags: string[];
+  visibility: Visibility;
+  discoverEnabled: boolean;
+  viewCount: number;
+  downloadCount: number;
+  reportCount: number;
+  uploader?: Uploader;
+  createdAt: string;
+  expiresAt: string;
+}
+
 export type VideoStatus = "processing" | "active" | "hidden" | "removed";
 
 export interface Category {

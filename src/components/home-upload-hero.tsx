@@ -1,9 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import {
-  UploadCloud,
   Copy,
   Check,
   QrCode,
@@ -21,7 +20,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -36,9 +34,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { cn, formatBytes } from "@/lib/utils";
+import { formatBytes } from "@/lib/utils";
 import { GUEST_UPLOAD_LIMIT_BYTES } from "@/lib/upload-eligibility";
-import { useUploadFlow, type CompletedUpload, type DiscoverDetails } from "@/lib/use-upload-flow";
+import { useMultiFileUploadFlow, type CompletedPackage, type DiscoverDetails } from "@/lib/use-multi-file-upload-flow";
+import { MultiFileUploadDropzone } from "@/components/multi-file-upload-dropzone";
+import { SelectedFileList } from "@/components/selected-file-list";
+import { UploadProgressList } from "@/components/upload-progress-list";
 import { useSession } from "@/lib/session";
 import { categories } from "@/lib/mock-data";
 import { toast } from "sonner";
@@ -64,11 +65,11 @@ function DiscoverDetailsSection({
   result,
   onPublish,
 }: {
-  result: CompletedUpload;
+  result: CompletedPackage;
   onPublish: (details: DiscoverDetails) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [title, setTitle] = useState(result.displayTitle);
+  const [title, setTitle] = useState(result.title);
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
   const [tagsInput, setTagsInput] = useState("");
@@ -86,7 +87,7 @@ function DiscoverDetailsSection({
   if (!open) {
     return (
       <div className="mx-auto mt-5 max-w-md rounded-xl border border-border/60 bg-background/30 p-4 text-center">
-        <p className="text-sm text-muted-foreground">Want this file to appear in Discover?</p>
+        <p className="text-sm text-muted-foreground">Want this upload to appear in Discover?</p>
         <p className="mt-1 text-xs text-muted-foreground/70">
           Add title, category, and tags before publishing publicly.
         </p>
@@ -110,7 +111,7 @@ function DiscoverDetailsSection({
             id="discover-title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Give this file a title"
+            placeholder="Give this upload a title"
           />
         </div>
         <div>
@@ -143,7 +144,7 @@ function DiscoverDetailsSection({
             rows={3}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="What's this file about? (optional)"
+            placeholder="What's in this upload? (optional)"
           />
         </div>
         <div>
@@ -188,16 +189,23 @@ function DiscoverDetailsSection({
 }
 
 export function HomeUploadHero() {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [dragging, setDragging] = useState(false);
   const [copied, setCopied] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
-  const { state, selectFile, cancel, reset, publishToDiscover } = useUploadFlow();
+  const { state, addFiles, removeFile, startUpload, cancel, reset, publishToDiscover } = useMultiFileUploadFlow();
   const { status } = useSession();
+
+  const handleFilesSelected = (files: File[]) => {
+    const { skipped } = addFiles(files);
+    if (skipped.length > 0) {
+      toast.error(
+        `${skipped.map((n) => `"${n}"`).join(", ")} ${skipped.length === 1 ? "is" : "are"} over the 2GB per-file limit and ${skipped.length === 1 ? "was" : "were"} skipped.`,
+      );
+    }
+  };
 
   const handleCopy = async (displayUrl: string) => {
     try {
-      // displayUrl is already a full https:// URL (see use-upload-flow.ts).
+      // displayUrl is already a full https:// URL (see use-multi-file-upload-flow.ts).
       await navigator.clipboard.writeText(displayUrl);
     } catch {
       // clipboard API unavailable — still show optimistic feedback in this prototype
@@ -219,20 +227,7 @@ export function HomeUploadHero() {
   if (state.stage === "uploading") {
     return (
       <StateCard>
-        <p className="text-lg font-medium">Uploading…</p>
-        <p className="mt-3 truncate text-sm text-muted-foreground">{state.fileName}</p>
-        <div className="mx-auto mt-5 max-w-md">
-          <Progress value={state.progress} className="h-2" />
-          <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-            <span>
-              {formatBytes((state.fileSizeBytes * state.progress) / 100)} / {formatBytes(state.fileSizeBytes)}
-            </span>
-            <span className="tabular-nums">{Math.round(state.progress)}%</span>
-          </div>
-        </div>
-        <Button variant="outline" size="sm" className="mt-6" onClick={cancel}>
-          Cancel
-        </Button>
+        <UploadProgressList files={state.files} overallProgress={state.overallProgress} onCancel={cancel} />
       </StateCard>
     );
   }
@@ -245,7 +240,7 @@ export function HomeUploadHero() {
           <CircleCheck className="h-7 w-7" />
         </div>
         <p className="mt-4 text-xl font-semibold tracking-tight">Upload complete!</p>
-        <p className="mt-1 text-sm text-muted-foreground">Your file is ready to share.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Your files are ready to share.</p>
 
         <div className="mx-auto mt-6 flex max-w-md items-center gap-2 rounded-xl border border-border bg-background/60 p-2 pl-4">
           <code className="flex-1 truncate text-left text-sm text-muted-foreground">{result.displayUrl}</code>
@@ -260,26 +255,14 @@ export function HomeUploadHero() {
         </div>
 
         <div className="mx-auto mt-5 max-w-md text-left">
-          {/* Full-width row of its own — a 4-up grid truncated this down to
-              a handful of characters (e.g. "Guitar cover ses..."), which
-              read as broken rather than just compact. Two-line clamp plus a
-              title tooltip covers names too long to show in full. Border
-              kept soft/flat (vs. the URL field's stronger border above) so
-              the two don't visually compete. */}
-          <div className="rounded-xl border border-border/40 bg-background/20 px-4 py-3">
-            <p className="text-xs font-medium text-muted-foreground/70">File name</p>
-            <p
-              className="mt-0.5 line-clamp-2 break-words text-sm font-semibold text-foreground"
-              title={result.displayTitle}
-            >
-              {result.displayTitle}
-            </p>
-          </div>
-
-          <div className="mt-3 grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div>
-              <p className="text-xs font-medium text-muted-foreground/70">File size</p>
-              <p className="mt-0.5 text-sm font-semibold text-foreground">{formatBytes(result.fileSizeBytes)}</p>
+              <p className="text-xs font-medium text-muted-foreground/70">Files</p>
+              <p className="mt-0.5 text-sm font-semibold text-foreground">{result.fileCount}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-muted-foreground/70">Total size</p>
+              <p className="mt-0.5 text-sm font-semibold text-foreground">{formatBytes(result.totalSizeBytes)}</p>
             </div>
             <div>
               <p className="text-xs font-medium text-muted-foreground/70">Expiration</p>
@@ -293,9 +276,25 @@ export function HomeUploadHero() {
 
           <p className="mt-2 text-xs text-muted-foreground/70">
             {result.visibility === "Public"
-              ? "Anyone can find this file on Discover."
-              : "Only people with this link can access this file."}
+              ? "Anyone can find this upload on Discover."
+              : "Only people with this link can access these files."}
           </p>
+
+          {/* Full file list — soft border/bg (vs. the URL field's stronger
+              border above) so the two don't visually compete. */}
+          <div className="mt-3 rounded-xl border border-border/40 bg-background/20 px-4 py-3">
+            <p className="text-xs font-medium text-muted-foreground/70">Files</p>
+            <ul className="mt-1.5 flex flex-col gap-1.5">
+              {result.files.map((f, i) => (
+                <li key={i} className="flex items-center justify-between gap-3 text-sm">
+                  <span className="truncate font-medium text-foreground" title={f.fileName}>
+                    {f.fileName}
+                  </span>
+                  <span className="shrink-0 text-xs text-muted-foreground">{formatBytes(f.fileSizeBytes)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
 
         {/* Open link leads (not Copy link, already handled above it) since
@@ -323,7 +322,7 @@ export function HomeUploadHero() {
             <DialogContent className="text-center">
               <DialogHeader>
                 <DialogTitle>Scan to open</DialogTitle>
-                <DialogDescription>Open this file&apos;s link on another device.</DialogDescription>
+                <DialogDescription>Open this upload&apos;s link on another device.</DialogDescription>
               </DialogHeader>
               <div className="flex items-center justify-center py-2">
                 {result.qrDataUrl ? (
@@ -345,7 +344,7 @@ export function HomeUploadHero() {
 
           <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground" onClick={reset}>
             <RotateCw className="h-3.5 w-3.5" />
-            Upload another file
+            Upload another package
           </Button>
         </div>
 
@@ -358,7 +357,7 @@ export function HomeUploadHero() {
         )}
         {status === "guest" && (
           <div className="mx-auto mt-5 max-w-md rounded-xl border border-border/60 bg-background/30 p-4 text-center">
-            <p className="text-sm text-muted-foreground">Want to publish this file to Discover?</p>
+            <p className="text-sm text-muted-foreground">Want to publish this upload to Discover?</p>
             <p className="mt-1 text-xs text-muted-foreground/70">
               Create an account to publish and manage public uploads.
             </p>
@@ -387,10 +386,10 @@ export function HomeUploadHero() {
         <p className="mx-auto mt-1.5 max-w-sm text-sm text-muted-foreground">
           Create a free account to continue uploading and manage your files.
         </p>
-        {state.attemptedFileSizeBytes !== undefined && (
+        {state.attemptedTotalBytes !== undefined && (
           <p className="mt-3 text-xs text-muted-foreground/70">
-            Remaining guest capacity: {formatBytes(state.eligibility.guestRemainingBytes)} · Selected file:{" "}
-            {formatBytes(state.attemptedFileSizeBytes)}
+            Remaining guest capacity: {formatBytes(state.eligibility.guestRemainingBytes)} · Selected files total:{" "}
+            {formatBytes(state.attemptedTotalBytes)}
           </p>
         )}
         <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
@@ -456,49 +455,24 @@ export function HomeUploadHero() {
     );
   }
 
-  // stage === "ready"
+  // state.stage is "ready" or "selecting" at this point — the dropzone
+  // (nothing chosen yet) and the review list (one or more files chosen,
+  // not yet uploading) share the same guest/auth note and footer below.
   const { eligibility } = state;
 
   return (
     <div className="w-full">
-      <button
-        type="button"
-        onClick={() => inputRef.current?.click()}
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragging(true);
-        }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setDragging(false);
-          const file = e.dataTransfer.files[0];
-          if (file) selectFile(file);
-        }}
-        className={cn(
-          "group relative flex w-full flex-col items-center justify-center gap-5 overflow-hidden rounded-3xl border-2 border-dashed border-border bg-card/60 px-6 py-16 text-center transition-colors sm:py-20",
-          dragging && "border-primary/60 bg-primary/5",
-        )}
-      >
-        <div className="pointer-events-none absolute -top-24 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-primary/20 blur-3xl transition-opacity group-hover:opacity-80" />
-        <div className="relative flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-brand shadow-lg shadow-primary/20">
-          <UploadCloud className="h-10 w-10 text-white" />
-        </div>
-        <div className="relative">
-          <p className="text-2xl font-semibold tracking-tight sm:text-3xl">Drag &amp; Drop or Click to Upload</p>
-          <p className="mt-2 text-sm text-muted-foreground">Drop a file below, get a link, and share it right away.</p>
-        </div>
-        <input
-          ref={inputRef}
-          type="file"
-          accept="video/*"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) selectFile(file);
-          }}
+      {state.stage === "ready" ? (
+        <MultiFileUploadDropzone onFilesSelected={handleFilesSelected} />
+      ) : (
+        <SelectedFileList
+          files={state.files}
+          onAddMore={handleFilesSelected}
+          onRemove={removeFile}
+          onStartUpload={startUpload}
+          onCancel={cancel}
         />
-      </button>
+      )}
 
       {eligibility.userType === "guest" ? (
         // Business-critical constraint — a small muted footer line was easy
@@ -507,10 +481,11 @@ export function HomeUploadHero() {
           <Gauge className="h-5 w-5 shrink-0 text-primary" />
           <div className="min-w-0">
             <p className="text-sm font-medium text-foreground">
-              Guest upload: {formatBytes(eligibility.guestRemainingBytes)} remaining /{" "}
+              Guest uploads: {formatBytes(eligibility.guestRemainingBytes)} remaining /{" "}
               {formatBytes(GUEST_UPLOAD_LIMIT_BYTES)} per IP
             </p>
             <p className="mt-0.5 text-xs text-muted-foreground">
+              Guest uploads are available up to 1GB per IP.{" "}
               <Link href="/login" className="font-medium text-primary hover:underline">
                 Sign in
               </Link>{" "}

@@ -1,4 +1,14 @@
-import type { Category, Tag, Video, StorageUsage, UploadHistoryEntry, UploadLimits } from "./types";
+import type {
+  Category,
+  Tag,
+  Video,
+  StorageUsage,
+  UploadHistoryEntry,
+  UploadLimits,
+  SharePackage,
+  PackageFile,
+  FileType,
+} from "./types";
 
 // "All" / "Popular" / "New" are view filters, not genres — kept separate from
 // the real category list so video generation below never assigns a video to
@@ -140,6 +150,116 @@ rawVideos.forEach((v) => {
 export const videos: Video[] = [...rawVideos]
   .sort((a, b) => b.rankScore - a.rankScore)
   .map((v, idx) => ({ ...v, rank: idx + 1 }));
+
+// --- Share packages (multi-file upload model) --------------------------
+// Every existing mock "video" is treated as a package of its own — the
+// video file itself, plus zero to two synthesized sibling files (a cover
+// image, a notes doc, etc.) — so /d/[shareToken] and Discover can render
+// the new multi-file package UI without a second parallel dataset. A real
+// backend replaces this with actual PackageFile rows (see prisma schema);
+// nothing downstream needs to change shape when that happens.
+
+function seedFromId(id: string): number {
+  const match = /vid_(\d+)/.exec(id);
+  if (match) return Number(match[1]);
+  let h = 0;
+  for (let c = 0; c < id.length; c++) h = (h * 31 + id.charCodeAt(c)) % 100000;
+  return h;
+}
+
+function slugify(title: string): string {
+  return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-+|-+$)/g, "") || "file";
+}
+
+const extraFilePool: { name: string; type: FileType; mimeType: string; sizeMbRange: [number, number] }[] = [
+  { name: "cover-photo.jpg", type: "IMAGE", mimeType: "image/jpeg", sizeMbRange: [2, 8] },
+  { name: "photo-01.png", type: "IMAGE", mimeType: "image/png", sizeMbRange: [1, 6] },
+  { name: "thumbnail.png", type: "IMAGE", mimeType: "image/png", sizeMbRange: [0.5, 3] },
+  {
+    name: "notes.pdf",
+    type: "DOCUMENT",
+    mimeType: "application/pdf",
+    sizeMbRange: [0.2, 4],
+  },
+  {
+    name: "details.docx",
+    type: "DOCUMENT",
+    mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    sizeMbRange: [0.1, 2],
+  },
+  { name: "voiceover.mp3", type: "AUDIO", mimeType: "audio/mpeg", sizeMbRange: [3, 12] },
+];
+
+export function videoToPackage(video: Video): SharePackage {
+  const seed = seedFromId(video.id);
+  const extraCount = Math.floor(seededRandom(seed + 20.5) * 3); // 0-2 extra files, deterministic per video
+
+  const files: PackageFile[] = [
+    {
+      id: `${video.id}_f0`,
+      originalFileName: `${slugify(video.title)}.mp4`,
+      displayName: `${slugify(video.title)}.mp4`,
+      fileSizeBytes: Math.round(video.fileSizeMb * 1024 * 1024),
+      mimeType: "video/mp4",
+      fileType: "VIDEO",
+      thumbnailGradient: video.thumbnailGradient,
+      durationSeconds: video.durationSeconds,
+      downloadCount: video.downloadCount,
+    },
+  ];
+
+  for (let k = 0; k < extraCount; k++) {
+    const pool = extraFilePool[(seed + k * 7) % extraFilePool.length];
+    const [minMb, maxMb] = pool.sizeMbRange;
+    const sizeMb = minMb + seededRandom(seed + k + 40.1) * (maxMb - minMb);
+    files.push({
+      id: `${video.id}_f${k + 1}`,
+      originalFileName: pool.name,
+      displayName: pool.name,
+      fileSizeBytes: Math.round(sizeMb * 1024 * 1024),
+      mimeType: pool.mimeType,
+      fileType: pool.type,
+      // Images can use the package's own gradient as a stand-in preview;
+      // other file types have no visual to preview.
+      ...(pool.type === "IMAGE" ? { thumbnailGradient: video.thumbnailGradient } : null),
+      downloadCount: Math.round(video.downloadCount * (0.1 + seededRandom(seed + k + 60) * 0.2)),
+    });
+  }
+
+  const totalSizeBytes = files.reduce((sum, f) => sum + f.fileSizeBytes, 0);
+
+  return {
+    id: video.id,
+    shareToken: video.shareToken,
+    ownerType: "USER",
+    title: video.title,
+    description: video.description,
+    files,
+    fileCount: files.length,
+    totalSizeBytes,
+    category: video.category,
+    tags: video.tags,
+    visibility: video.visibility,
+    discoverEnabled: video.discoverEnabled,
+    viewCount: video.views,
+    downloadCount: video.downloadCount,
+    reportCount: video.reportCount,
+    uploader: video.uploader,
+    createdAt: video.createdAt,
+    expiresAt: video.expiresAt,
+  };
+}
+
+/** Package-summary fields for a Discover/Search card — cheaper than a full videoToPackage() when only badges are needed. */
+export function packageSummary(video: Video): { fileCount: number; totalSizeBytes: number; fileTypes: FileType[] } {
+  const pkg = videoToPackage(video);
+  return { fileCount: pkg.fileCount, totalSizeBytes: pkg.totalSizeBytes, fileTypes: Array.from(new Set(pkg.files.map((f) => f.fileType))) };
+}
+
+export function getPackageByShareToken(shareToken: string): SharePackage | undefined {
+  const video = videos.find((v) => v.shareToken === shareToken);
+  return video ? videoToPackage(video) : undefined;
+}
 
 // The videos shown as "mine" on /me — until real auth/ownership exists,
 // this mock just claims the first 7. Exported so any page that needs to

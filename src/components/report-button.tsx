@@ -44,7 +44,7 @@ export function ReportButton({ variant = "default" }: { variant?: "default" | "i
     // report form, same idea as the email-verification gate on uploads
     // (block the action, tell the user why, no dead-end UI).
     if (status !== "authenticated") {
-      toast.error("Log in to report this video.");
+      toast.error("Log in to report this upload.");
       return;
     }
     setOpen(true);
@@ -56,7 +56,7 @@ export function ReportButton({ variant = "default" }: { variant?: "default" | "i
         <Button
           size="icon-sm"
           variant="outline"
-          aria-label="Report this video"
+          aria-label="Report this upload"
           className="bg-black/55 text-white/90 backdrop-blur-sm hover:bg-black/70 hover:text-white"
           onClick={handleTriggerClick}
         >
@@ -70,7 +70,7 @@ export function ReportButton({ variant = "default" }: { variant?: "default" | "i
       )}
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Report this video</DialogTitle>
+          <DialogTitle>Report this upload</DialogTitle>
           <DialogDescription>
             Help us keep Swimmy File safe. Reports are reviewed by our moderation team.
           </DialogDescription>
