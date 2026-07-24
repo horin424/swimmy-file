@@ -60,8 +60,12 @@ function StateCard({ children }: { children: React.ReactNode }) {
 
 // Mode 2 (Publish to Discover) — optional, collapsed by default, and never
 // blocks copying the share link above it (Mode 1/Quick Share already
-// finished by the time this renders). Guests never see this at all; see
-// the "Add details for Discover" call site in HomeUploadHero.
+// finished by the time this renders). Operates on the *package* as a whole,
+// not per file: one title/category/description/tag set describes everything
+// in the share, matching the "one shared package = one Discover card"
+// product direction — there's no per-file metadata UI here, deliberately.
+// Guests/unverified users never see this form at all; see the call sites in
+// HomeUploadHero for the account-gated variants shown instead.
 function DiscoverDetailsSection({
   result,
   onPublish,
@@ -70,7 +74,11 @@ function DiscoverDetailsSection({
   onPublish: (details: DiscoverDetails) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [title, setTitle] = useState(result.title);
+  // Deliberately NOT pre-filled from result.title — that default is derived
+  // from the files themselves (a single file's name, or "N files"), which
+  // reads as a meaningless Discover title ("3 files"). The user has to type
+  // something real; the field starts empty with a placeholder instead.
+  const [title, setTitle] = useState("");
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
   const [tagsInput, setTagsInput] = useState("");
@@ -106,14 +114,17 @@ function DiscoverDetailsSection({
       <div className="flex flex-col gap-3">
         <div>
           <Label htmlFor="discover-title" className="mb-1.5 text-xs text-muted-foreground">
-            Title <span className="text-destructive">*</span>
+            Shared upload title <span className="text-destructive">*</span>
           </Label>
           <Input
             id="discover-title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Give this upload a title"
+            placeholder="Give this shared upload a title"
           />
+          <p className="mt-1 text-xs text-muted-foreground/70">
+            This title represents the whole shared package, not each individual file.
+          </p>
         </div>
         <div>
           <Label className="mb-1.5 text-xs text-muted-foreground">
@@ -135,6 +146,7 @@ function DiscoverDetailsSection({
               ))}
             </SelectContent>
           </Select>
+          <p className="mt-1 text-xs text-muted-foreground/70">Choose the best category for this shared upload.</p>
         </div>
         <div>
           <Label htmlFor="discover-description" className="mb-1.5 text-xs text-muted-foreground">
@@ -156,10 +168,32 @@ function DiscoverDetailsSection({
             id="discover-tags"
             value={tagsInput}
             onChange={(e) => setTagsInput(e.target.value)}
-            placeholder="gaming, tutorial, funny"
+            placeholder="tutorial, music, travel"
           />
-          <p className="mt-1 text-xs text-muted-foreground/70">Comma-separated</p>
+          <p className="mt-1 text-xs text-muted-foreground/70">Add tags that describe the shared package.</p>
         </div>
+
+        {/* Read-only — files aren't individually editable here, just shown
+            so the user can see what they're about to publish as one item. */}
+        <div className="rounded-lg border border-border/50 bg-background/30 p-3">
+          <p className="text-xs font-medium text-muted-foreground/70">Files in this shared upload</p>
+          <ul className="mt-1.5 flex flex-col gap-1">
+            {result.files.map((f, i) => (
+              <li key={i} className="flex items-center justify-between gap-3 text-xs">
+                <span className="min-w-0 truncate text-foreground" title={f.fileName}>
+                  {i + 1}. {f.fileName}
+                </span>
+                <span className="shrink-0 text-muted-foreground">
+                  {fileTypeLabel(f.fileType)} · {formatBytes(f.fileSizeBytes)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <p className="text-xs text-muted-foreground/70">
+          For Discover, publish related files together. If your files are unrelated, create separate shared uploads.
+        </p>
       </div>
       <div className="mt-4 flex items-center justify-end gap-2">
         <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setOpen(false)}>
@@ -193,7 +227,7 @@ export function HomeUploadHero() {
   const [copied, setCopied] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
   const { state, addFiles, removeFile, startUpload, cancel, reset, publishToDiscover } = useMultiFileUploadFlow();
-  const { status } = useSession();
+  const { status, user } = useSession();
 
   const handleFilesSelected = (files: File[]) => {
     const { skipped } = addFiles(files);
@@ -353,28 +387,48 @@ export function HomeUploadHero() {
           </Button>
         </div>
 
-        {/* Mode 2 (Publish to Discover). Guests get a scaled-down variant
-            that sells the account instead of the form — they can't actually
-            publish without one, so showing the full title/category/tags
-            form to a guest would just dead-end at a gate later. */}
-        {status === "authenticated" && (
+        {/* Mode 2 (Publish to Discover). Guests and unverified accounts each
+            get a scaled-down variant that sells the account/verification
+            instead of the form — neither can actually publish, so showing
+            the full title/category/tags form would just dead-end at a gate
+            later. Only a verified, logged-in user gets the real form. */}
+        {status === "authenticated" && user?.emailVerified && (
           <DiscoverDetailsSection result={result} onPublish={publishToDiscover} />
+        )}
+        {status === "authenticated" && user && !user.emailVerified && (
+          <div className="mx-auto mt-5 max-w-md rounded-xl border border-border/60 bg-background/30 p-4 text-center">
+            <p className="text-sm text-muted-foreground">Verify your email to publish this upload to Discover.</p>
+            <Button
+              size="sm"
+              className="mt-3 gap-1.5 bg-gradient-brand text-white hover:opacity-90"
+              onClick={() => toast.success("Verification email sent")}
+            >
+              <MailWarning className="h-3.5 w-3.5" />
+              Resend verification email
+            </Button>
+          </div>
         )}
         {status === "guest" && (
           <div className="mx-auto mt-5 max-w-md rounded-xl border border-border/60 bg-background/30 p-4 text-center">
-            <p className="text-sm text-muted-foreground">Want to publish this upload to Discover?</p>
+            <p className="text-sm text-muted-foreground">Want this upload to appear in Discover?</p>
             <p className="mt-1 text-xs text-muted-foreground/70">
-              Create an account to publish and manage public uploads.
+              Create a free account to publish public uploads and manage your files.
             </p>
-            <Button
-              render={<Link href="/signup" />}
-              nativeButton={false}
-              size="sm"
-              className="mt-3 gap-1.5 bg-gradient-brand text-white hover:opacity-90"
-            >
-              <UserPlus className="h-3.5 w-3.5" />
-              Create account
-            </Button>
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+              <Button
+                render={<Link href="/signup" />}
+                nativeButton={false}
+                size="sm"
+                className="gap-1.5 bg-gradient-brand text-white hover:opacity-90"
+              >
+                <UserPlus className="h-3.5 w-3.5" />
+                Create account
+              </Button>
+              <Button render={<Link href="/login" />} nativeButton={false} variant="outline" size="sm" className="gap-1.5">
+                <LogIn className="h-3.5 w-3.5" />
+                Log in
+              </Button>
+            </div>
           </div>
         )}
       </StateCard>
